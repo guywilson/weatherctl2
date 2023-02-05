@@ -2,3 +2,5 @@
 /build
 /dep
 wctl2
+wctl.log
+wctl.pid

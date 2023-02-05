@@ -8,6 +8,7 @@
 
 #include "threads.h"
 #include "logger.h"
+#include "configmgr.h"
 
 extern "C" {
 #include "nRF24L01.h"
@@ -32,8 +33,11 @@ void * RadioRxThread::run() {
     uint8_t             rxBuffer[32];
     weather_packet_t    weather;
     
+    ConfigManager & cfg = ConfigManager::getInstance();
+
     rpi = rpi_init();
-    spi = spiOpen(rpi, SPI_CHANNEL_0);
+    spi = spiOpen(rpi, cfg.getValueAsInteger("radio.spiport"));
+    spiSetup(spi, strtoul(cfg.getValue("radio.spifreq"), NULL, 10));
 
     nRF24L01_setup(rpi, spi);
 

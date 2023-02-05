@@ -21,6 +21,7 @@
 #include "logger.h"
 #include "configmgr.h"
 #include "posixthread.h"
+#include "threads.h"
 
 extern "C" {
 	#include "version.h"
@@ -174,4 +175,15 @@ int main(int argc, char ** argv) {
 			log.initLogger(filename, level);
 		}
 	}
+
+#ifndef __APPLE__
+    RadioRxThread * rxThread = new RadioRxThread();
+    rxThread->start();
+#endif
+
+    while (1) {
+        PosixThread::sleep(PosixThread::seconds, 5U);
+    }
+
+    return 0;
 }
