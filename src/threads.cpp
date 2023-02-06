@@ -32,12 +32,26 @@ void * RadioRxThread::run() {
     SPI *               spi;
     uint8_t             rxBuffer[32];
     weather_packet_t    weather;
-    
+
     ConfigManager & cfg = ConfigManager::getInstance();
 
+    printf("Initialising RPI...\n");
+
     rpi = rpi_init();
+
+    rpi_print_info(rpi);
+
+    printf("Opening SPI device [%d]\n", cfg.getValueAsInteger("radio.spiport"));
+
     spi = spiOpen(rpi, cfg.getValueAsInteger("radio.spiport"));
+
+    printf(
+        "Setting up SPI device with freq [%lu]\n", 
+        strtoul(cfg.getValue("radio.spifreq"), NULL, 10));
+
     spiSetup(spi, strtoul(cfg.getValue("radio.spifreq"), NULL, 10));
+
+    printf("Setting up nRF24L01 device...\n");
 
     nRF24L01_setup(rpi, spi);
 

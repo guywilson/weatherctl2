@@ -95,6 +95,8 @@ int nRF24L01_setup(RPIHANDLE * rpi, SPI * spi) {
     uint8_t         configData[8];
     uint8_t         txAddr[5]; // {0xE0, 0xE0, 0xF1, 0xF1, 0xE0};
 
+    printf("Opening GPIO...\n");
+
     pGPIO = gpio_open(rpi);
 
 	/*
@@ -113,6 +115,8 @@ int nRF24L01_setup(RPIHANDLE * rpi, SPI * spi) {
     configData[5] = 40;         // RF_CH register
     configData[6] = 0x07;       // RF_SETUP register
     configData[7] = 0x70;       // STATUS register
+
+    printf("Configuring nRF24L01 device..\n");
 
     spiWriteReadByte(spi, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
     spiWriteByte(spi, configData[0], false);
