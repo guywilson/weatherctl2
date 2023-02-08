@@ -6,6 +6,14 @@
 
 #include <librpi/librpi.h>
 
+#ifdef __APPLE__
+extern "C" {
+#include "dummy_lgpio.h"
+}
+#else
+#include <lgpio.h>
+#endif
+
 #include "threads.h"
 #include "logger.h"
 #include "configmgr.h"
@@ -28,8 +36,8 @@ weather_packet_t;
 
 void * RadioRxThread::run() {
     bool                go = true;
-    RPIHANDLE *         rpi;
-    SPI *               spi;
+    int                 hgpio;
+    int                 hspi;
     uint8_t             rxBuffer[32];
     weather_packet_t    weather;
 
@@ -37,26 +45,22 @@ void * RadioRxThread::run() {
 
     printf("Initialising RPI...\n");
 
-    rpi = rpi_init();
-
-    rpi_print_info(rpi);
+    hgpio = lgGpiochipOpen(0);
 
     printf("Opening SPI device [%d]\n", cfg.getValueAsInteger("radio.spiport"));
 
-    spi = spiOpen(rpi, cfg.getValueAsInteger("radio.spiport"));
-
-    printf(
-        "Setting up SPI device with freq [%lu]\n", 
-        strtoul(cfg.getValue("radio.spifreq"), NULL, 10));
-
-    spiSetup(spi, strtoul(cfg.getValue("radio.spifreq"), NULL, 10));
+    hspi = lgSpiOpen(
+        cfg.getValueAsInteger("radio.spiport"), 
+        cfg.getValueAsInteger("radio.spiport"), 
+        cfg.getValueAsInteger("radio.spifreq"), 
+        0);
 
     printf("Setting up nRF24L01 device...\n");
 
-    nRF24L01_setup(rpi, spi);
+    nRF24L01_setup(hgpio, hspi);
 
     while (go) {
-        nRF24L01_receive_blocking(spi, rxBuffer, 32);
+        nRF24L01_receive_blocking(hspi, rxBuffer, 32);
 
         memcpy(&weather, rxBuffer, sizeof(weather_packet_t));
 

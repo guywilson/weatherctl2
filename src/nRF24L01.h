@@ -52,18 +52,18 @@
 #define NRF24L01_REG_DYNPD                          0x1C
 #define NRF24L01_REG_FEATURE                        0x1D
 
-int nRF24L01_setup(RPIHANDLE * rpi, SPI * spi); 
+int nRF24L01_setup(int hGPIO, int hSPI); 
 int nRF24L01_transmit_buffer(
-            SPI * spi, 
+            int hSPI, 
             uint8_t * buf, 
             int length, 
             bool requestACK);
 int nRF24L01_transmit_string(
-            SPI * spi, 
+            int hSPI, 
             char * pszText, 
             bool requestACK);
 int nRF24L01_receive_blocking(
-            SPI * spi, 
+            int hSPI, 
             uint8_t * buffer, 
             int length);
 
