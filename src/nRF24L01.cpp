@@ -31,12 +31,12 @@ int nRF24L01::_handleSPITransferError(
 {
     if (errorCode <= 0) {
         strncpy(szTemp, pszMessage, TEMP_MESSAGE_LEN);
-        strncat(szTemp, ": %d", TEMP_MESSAGE_LEN);
-        log.logError(szTemp, errorCode);
+        strncat(szTemp, ": %s", TEMP_MESSAGE_LEN);
+        log.logError(szTemp, lguErrorText(errorCode));
         throw nrf24_error(
                 nrf24_error::buildMsg(
                                 szTemp, 
-                                errorCode), 
+                                lguErrorText(errorCode)), 
                 pszSourceFile, 
                 sourceLine);
     }
@@ -195,14 +195,37 @@ void nRF24L01::_transmit(uint8_t * data, uint16_t dataLength, bool requestACK) {
 }
 
 nRF24L01::nRF24L01(int hSPI, int CEPin) {
+    int             rtn;
+
     _hGPIO = lgGpiochipOpen(0);
+
+    if (_hGPIO < 0) {
+        log.logError("nRF24L01::init() - Failed to open GPIO device: %s", lguErrorText(_hGPIO));
+        throw nrf24_error(
+                nrf24_error::buildMsg(
+                                "nRF24L01::init() - Failed to open GPIO device: %s", 
+                                lguErrorText(_hGPIO)),
+                __FILE__,
+                __LINE__);
+    }
 
     _CEPin = CEPin;
 
 	/*
 	** SPI CE
 	*/
-    lgGpioClaimOutput(_hGPIO, 0, _CEPin, 0);
+    rtn = lgGpioClaimOutput(_hGPIO, 0, _CEPin, 0);
+
+    if (rtn < 0) {
+        log.logError("nRF24L01::init() - Failed to claim pin %d as output: %s", _CEPin, lguErrorText(_hGPIO));
+        throw nrf24_error(
+                nrf24_error::buildMsg(
+                                "nRF24L01::init() - Failed to claim pin %d as output: %s",
+                                _CEPin,
+                                lguErrorText(_hGPIO)),
+                __FILE__,
+                __LINE__);
+    }
 
     sleep(100);
 }
