@@ -55,6 +55,8 @@ uint8_t nRF24L01::_writeRegister(uint8_t registerID, uint8_t value) {
 
     _handleSPITransferError(rtn, "Error issuing write command", __FILE__, __LINE__);
 
+    log.logDebug("nRF24L01::_writeRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
+
     rtn = spiWriteByte(_hSPI, value);
 
     _handleSPITransferError(rtn, "Error writing register", __FILE__, __LINE__);
@@ -72,6 +74,8 @@ uint8_t nRF24L01::_writeRegister(uint8_t registerID, uint16_t value) {
                 &statusReg);
 
     _handleSPITransferError(rtn, "Error issuing write command", __FILE__, __LINE__);
+
+    log.logDebug("nRF24L01::_writeRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
 
     rtn = spiWriteWord(_hSPI, value);
 
@@ -91,6 +95,8 @@ uint8_t nRF24L01::_writeRegister(uint8_t registerID, uint8_t * data, uint16_t da
 
     _handleSPITransferError(rtn, "Error issuing write command", __FILE__, __LINE__);
 
+    log.logDebug("nRF24L01::_writeRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
+
     rtn = spiWriteData(_hSPI, data, dataLength);
 
     _handleSPITransferError(rtn, "Error writing register", __FILE__, __LINE__);
@@ -109,6 +115,8 @@ void nRF24L01::_readRegister(uint8_t registerID, uint8_t * regValue) {
 
     _handleSPITransferError(rtn, "Error sending read command", __FILE__, __LINE__);
 
+    log.logDebug("nRF24L01::_readRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
+
     rtn = spiReadByte(_hSPI, regValue);
 
     _handleSPITransferError(rtn, "Error reading register", __FILE__, __LINE__);
@@ -125,6 +133,8 @@ void nRF24L01::_readRegister(uint8_t registerID, uint16_t * regValue) {
 
     _handleSPITransferError(rtn, "Error sending read command", __FILE__, __LINE__);
 
+    log.logDebug("nRF24L01::_readRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
+
     rtn = spiReadWord(_hSPI, regValue);
 
     _handleSPITransferError(rtn, "Error reading register", __FILE__, __LINE__);
@@ -140,6 +150,8 @@ void nRF24L01::_readRegister(uint8_t registerID, uint8_t * data, uint16_t dataLe
                 &statusReg);
 
     _handleSPITransferError(rtn, "Error sending read command", __FILE__, __LINE__);
+
+    log.logDebug("nRF24L01::_readRegister(0x%02X) - STATUS: 0x%02X", registerID, statusReg);
 
     rtn = spiReadData(_hSPI, data, dataLength);
 
@@ -209,6 +221,8 @@ nRF24L01::nRF24L01(int hSPI, int CEPin) {
                 __LINE__);
     }
 
+    log.logDebug("Opened GPIO device with handle %d", _hGPIO);
+
     _CEPin = CEPin;
 
 	/*
@@ -226,6 +240,8 @@ nRF24L01::nRF24L01(int hSPI, int CEPin) {
                 __FILE__,
                 __LINE__);
     }
+
+    log.logDebug("Claimed pin %d for output with return code %d", _CEPin, rtn);
 
     sleep(100);
 }
@@ -258,13 +274,15 @@ void nRF24L01::writeConfig(const uint8_t flags) {
 
     _writeRegister(NRF24L01_REG_CONFIG, flags);
 
+    log.logDebug("nRF24L01::writeConfig() - set CONFIG register to 0x%02X", flags);
+
     statusReg = _writeRegister(
                         NRF24L01_REG_STATUS, 
                         (uint8_t)(NRF24L01_STATUS_CLEAR_RX_DR | 
                         NRF24L01_STATUS_CLEAR_TX_DS | 
                         NRF24L01_STATUS_CLEAR_MAX_RT));
 
-    log.logDebug("nRF24L01::init: Status reg: 0x%02X", statusReg);
+    log.logDebug("nRF24L01::init() - STATUS: 0x%02X", statusReg);
 }
 
 void nRF24L01::writeRFSetup(uint8_t flags) {
