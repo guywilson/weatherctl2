@@ -271,12 +271,15 @@ void nRF24L01::powerDown() {
 
 void nRF24L01::writeConfig(const uint8_t flags) {
     uint8_t             statusReg;
+    uint8_t             configReg;
 
     log.logDebug("nRF24L01::writeConfig() - Writing config register with 0x%02X", flags);
 
-    _writeRegister(NRF24L01_REG_CONFIG, flags);
+    statusReg = _writeRegister(NRF24L01_REG_CONFIG, flags);
 
-    log.logDebug("nRF24L01::writeConfig() - set CONFIG register to 0x%02X", flags);
+    _readRegister(NRF24L01_REG_CONFIG, &configReg);
+
+    log.logDebug("nRF24L01::writeConfig() - set CONFIG, read back as: 0x%02X, STATUS: 0x%02X", configReg, statusReg);
 
     statusReg = _writeRegister(
                         NRF24L01_REG_STATUS, 
