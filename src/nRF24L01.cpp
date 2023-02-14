@@ -262,6 +262,8 @@ nRF24L01::~nRF24L01() {
 void nRF24L01::_powerUp(bool isRx) {
     uint8_t             regCONFIG;
 
+    _setCEPin(false);
+    
     _readRegister(NRF24L01_REG_CONFIG, &regCONFIG);
 
     regCONFIG |= NRF24L01_CFG_POWER_UP;
@@ -279,7 +281,7 @@ void nRF24L01::_powerDown() {
     uint8_t             regCONFIG;
 
     _setCEPin(false);
-    
+
     _readRegister(NRF24L01_REG_CONFIG, &regCONFIG);
 
     regCONFIG &= ~(NRF24L01_CFG_POWER_UP | NRF24L01_CFG_MODE_RX);
