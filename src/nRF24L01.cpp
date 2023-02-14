@@ -191,11 +191,11 @@ void nRF24L01::_transmit(uint8_t * data, uint16_t dataLength, bool requestACK) {
     ** Pulse the CE line for > 10us to enable 
     ** the device in TX mode to send the data
     */
-    lgGpioWrite(_hGPIO, NRF24L01_SPI_PIN_CE, 1);
+    lgGpioWrite(_hGPIO, _CEPin, 1);
 
     usleep(11U);
 
-    lgGpioWrite(_hGPIO, NRF24L01_SPI_PIN_CE, 0);
+    lgGpioWrite(_hGPIO, _CEPin, 0);
 
     /*
     ** Clear the TX_DS bit...
@@ -284,7 +284,7 @@ void nRF24L01::writeConfig(const uint8_t flags) {
                         NRF24L01_STATUS_CLEAR_TX_DS | 
                         NRF24L01_STATUS_CLEAR_MAX_RT));
 
-    log.logDebug("nRF24L01::init() - STATUS: 0x%02X", statusReg);
+    log.logDebug("nRF24L01::writeConfig() - STATUS: 0x%02X", statusReg);
 }
 
 void nRF24L01::writeRFSetup(uint8_t flags) {

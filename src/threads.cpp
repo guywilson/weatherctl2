@@ -39,6 +39,7 @@ void * RadioRxThread::run() {
     int                 hspi;
     uint8_t             rxBuffer[32];
     uint8_t             deviceAddress[5];
+    uint8_t             dataRate;
     weather_packet_t    weather;
     
     Logger & log = Logger::getInstance();
@@ -54,7 +55,7 @@ void * RadioRxThread::run() {
 
     log.logDebug("RadioRxThread::run() - Setting up nRF24L01 device...");
 
-    nRF24L01 radio(hspi, NRF24L01_SPI_PIN_CE);
+    nRF24L01 radio(hspi, cfg.getValueAsInteger("radio.spicepin"));
 
     radio.writeConfig(
             NRF24L01_CFG_MASK_RX_DR | 
@@ -69,7 +70,14 @@ void * RadioRxThread::run() {
     radio.enableRxAddress(1, true);
     radio.setupAutoRetransmission(0, 0);
     radio.setRFChannel(40);
+
+    dataRate = 
+        (strcmp(cfg.getValue("radio.baud"), "1MHz") == 0) ?
+         NRF24L01_RF_SETUP_DATA_RATE_1MBPS : 
+         NRF24L01_RF_SETUP_DATA_RATE_2MBPS;
+
     radio.writeRFSetup(
+            dataRate |
             NRF24L01_RF_SETUP_RF_POWER_HIGH | 
             NRF24L01_RF_SETUP_RF_LNA_GAIN_ON);
 

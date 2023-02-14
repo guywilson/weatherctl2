@@ -11,8 +11,6 @@ using namespace std;
 #ifndef __INCL_NRF24L01
 #define __INCL_NRF24L01
 
-#define NRF24L01_SPI_PIN_CE                          5
-
 #define NRF24L01_DEFAULT_PACKET_LEN                 32
 
 /*
