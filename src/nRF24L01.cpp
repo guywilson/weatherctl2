@@ -29,7 +29,7 @@ int nRF24L01::_handleSPITransferError(
                     const char * pszSourceFile, 
                     int sourceLine)
 {
-    if (errorCode <= 0) {
+    if (errorCode < 0) {
         strncpy(szTemp, pszMessage, TEMP_MESSAGE_LEN);
         strncat(szTemp, ": %s", TEMP_MESSAGE_LEN);
         log.logError(szTemp, lguErrorText(errorCode));
