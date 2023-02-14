@@ -277,6 +277,8 @@ void nRF24L01::writeConfig(const uint8_t flags) {
 
     statusReg = _writeRegister(NRF24L01_REG_CONFIG, flags);
 
+    usleep(2000);
+
     _readRegister(NRF24L01_REG_CONFIG, &configReg);
 
     log.logDebug("nRF24L01::writeConfig() - set CONFIG, read back as: 0x%02X, STATUS: 0x%02X", configReg, statusReg);
