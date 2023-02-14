@@ -62,9 +62,7 @@ void * RadioRxThread::run() {
             NRF24L01_CFG_MASK_TX_DS | 
             NRF24L01_CFG_MASK_MAX_RT | 
             NRF24L01_CFG_ENABLE_CRC | 
-            NRF24L01_CFG_CRC_2_BYTE | 
-            NRF24L01_CFG_MODE_RX | 
-            NRF24L01_CFG_POWER_UP);
+            NRF24L01_CFG_CRC_2_BYTE);
 
     radio.setAddressWidth(nRF24L01::aw5Bytes);
     radio.enableRxAddress(1, true);
@@ -90,9 +88,13 @@ void * RadioRxThread::run() {
     radio.setRxAddress(1, deviceAddress);
     radio.setTxAddress(deviceAddress);
 
+    radio.setRxPayloadSize(1, 32);
+
     radio.activateAdditionalFeatures();
     radio.enableFeatures(NRF24L01_FEATURE_EN_TX_NO_ACK);
 
+    radio.startListening();
+        
     while (go) {
         radio.receive(rxBuffer);
 

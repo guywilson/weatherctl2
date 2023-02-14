@@ -177,6 +177,8 @@ private:
 
     Logger & log = Logger::getInstance();
 
+    void        _setCEPin(bool state);
+
     int         _handleSPITransferError(
                     int errorCode,
                     const char * pszMessage,
@@ -193,12 +195,12 @@ private:
 
     void        _transmit(uint8_t * data, uint16_t dataLength, bool requestACK);
 
+    void        _powerUp(bool isRx);
+    void        _powerDown();
+
 public:
     nRF24L01(int hSPI, int CEPin);
     ~nRF24L01();
-
-    void        powerUp();
-    void        powerDown();
 
     void        writeConfig(const uint8_t flags);
     void        writeRFSetup(const uint8_t flags);
@@ -211,11 +213,15 @@ public:
     void        setRFChannel(const uint8_t channel);
     void        setRxAddress(int dataPipe, uint8_t * address);
     void        setTxAddress(uint8_t * address);
+    void        setRxPayloadSize(int dataPipe, uint8_t payloadSize);
     void        activateAdditionalFeatures();
     void        enableFeatures(const uint8_t flags);
 
     bool        isRxDataAvailable();
     bool        isRxDataAvailable(int dataPipe);
+
+    void        startListening();
+    void        stopListening();
 
     void        receive(uint8_t * buffer);
     void        send(uint8_t * buffer, int bufferLength, bool requestACK);

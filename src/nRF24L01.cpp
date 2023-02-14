@@ -23,6 +23,10 @@ using namespace std;
 
 static char szTemp[TEMP_MESSAGE_LEN];
 
+void nRF24L01::_setCEPin(bool state) {
+    lgGpioWrite(_hGPIO, _CEPin, (state ? 1 : 0));
+}
+
 int nRF24L01::_handleSPITransferError(
                     int errorCode,
                     const char * pszMessage,
@@ -184,6 +188,8 @@ void nRF24L01::_transmit(uint8_t * data, uint16_t dataLength, bool requestACK) {
 
     _handleSPITransferError(rtn, "Error writing TX data", __FILE__, __LINE__);
 
+    _powerUp(false);
+
     // sprintf(szTemp, "St: 0x%02X\n", statusReg);
     // uart_puts(uart0, szTemp);
 
@@ -191,11 +197,13 @@ void nRF24L01::_transmit(uint8_t * data, uint16_t dataLength, bool requestACK) {
     ** Pulse the CE line for > 10us to enable 
     ** the device in TX mode to send the data
     */
-    lgGpioWrite(_hGPIO, _CEPin, 1);
+    _setCEPin(true);
 
     usleep(11U);
 
-    lgGpioWrite(_hGPIO, _CEPin, 0);
+    _setCEPin(false);
+
+    _powerDown();
 
     /*
     ** Clear the TX_DS bit...
@@ -243,28 +251,38 @@ nRF24L01::nRF24L01(int hSPI, int CEPin) {
 
     log.logDebug("Claimed pin %d for output with return code %d", _CEPin, rtn);
 
+    _setCEPin(false);
+
     usleep(100000);
 }
 
 nRF24L01::~nRF24L01() {
 }
 
-void nRF24L01::powerUp() {
+void nRF24L01::_powerUp(bool isRx) {
     uint8_t             regCONFIG;
 
     _readRegister(NRF24L01_REG_CONFIG, &regCONFIG);
 
     regCONFIG |= NRF24L01_CFG_POWER_UP;
 
+    if (isRx) {
+        regCONFIG |= NRF24L01_CFG_MODE_RX;
+    }
+
     _writeRegister(NRF24L01_REG_CONFIG, regCONFIG);
+
+    _setCEPin(true);
 }
 
-void nRF24L01::powerDown() {
+void nRF24L01::_powerDown() {
     uint8_t             regCONFIG;
 
+    _setCEPin(false);
+    
     _readRegister(NRF24L01_REG_CONFIG, &regCONFIG);
 
-    regCONFIG &= ~NRF24L01_CFG_POWER_UP;
+    regCONFIG &= ~(NRF24L01_CFG_POWER_UP | NRF24L01_CFG_MODE_RX);
 
     _writeRegister(NRF24L01_REG_CONFIG, regCONFIG);
 }
@@ -417,6 +435,27 @@ void nRF24L01::setTxAddress(uint8_t * address) {
     log.logDebug("nRF24L01::setTxAddress() - STATUS reg: 0x%02X", statusReg);
 }
 
+void nRF24L01::setRxPayloadSize(int dataPipe, uint8_t payloadSize) {
+    uint8_t             statusReg;
+
+    if (dataPipe >= 0 && dataPipe < 6) {
+        if (payloadSize > 32) {
+            log.logError("nRF24L01::setRxPayloadSize: Invalid payload size %d", (int)payloadSize);
+            throw nrf24_error("nRF24L01::setRxPayloadSize: Invalid payload size", __FILE__, __LINE__);
+        }
+
+        statusReg = _writeRegister(
+                        (uint8_t)(NRF24L01_REG_RX_PW_P0 + dataPipe), 
+                        payloadSize);
+
+        log.logDebug("nRF24L01::setRxPayloadSize() - STATUS reg: 0x%02X", statusReg);
+    }
+    else {
+        log.logError("nRF24L01::setRxPayloadSize: Invalid data pipe %d", dataPipe);
+        throw nrf24_error("nRF24L01::setRxPayloadSize: Invalid data pipe", __FILE__, __LINE__);
+    }
+}
+
 void nRF24L01::activateAdditionalFeatures() {
     uint8_t             statusReg;
     int                 rtn;
@@ -461,6 +500,14 @@ bool nRF24L01::isRxDataAvailable(int dataPipe) {
     }
 
     return isRx;
+}
+
+void nRF24L01::startListening() {
+    _powerUp(true);
+}
+
+void nRF24L01::stopListening() {
+    _powerDown();
 }
 
 void nRF24L01::receive(uint8_t * buffer) {
