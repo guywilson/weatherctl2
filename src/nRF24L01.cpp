@@ -243,7 +243,7 @@ nRF24L01::nRF24L01(int hSPI, int CEPin) {
 
     log.logDebug("Claimed pin %d for output with return code %d", _CEPin, rtn);
 
-    sleep(100);
+    usleep(100000);
 }
 
 nRF24L01::~nRF24L01() {
@@ -273,7 +273,7 @@ void nRF24L01::writeConfig(const uint8_t flags) {
     uint8_t             statusReg;
 
     log.logDebug("nRF24L01::writeConfig() - Writing config register with 0x%02X", flags);
-    
+
     _writeRegister(NRF24L01_REG_CONFIG, flags);
 
     log.logDebug("nRF24L01::writeConfig() - set CONFIG register to 0x%02X", flags);
