@@ -263,7 +263,7 @@ void nRF24L01::_powerUp(bool isRx) {
     uint8_t             regCONFIG;
 
     _setCEPin(false);
-    
+
     _readRegister(NRF24L01_REG_CONFIG, &regCONFIG);
 
     regCONFIG |= NRF24L01_CFG_POWER_UP;
@@ -413,10 +413,14 @@ void nRF24L01::setRxAddress(int dataPipe, uint8_t * address) {
     uint8_t             statusReg;
 
     if (dataPipe >= 0 && dataPipe < 6) {
+        _setCEPin(false);
+
         statusReg = _writeRegister(
                         (uint8_t)(NRF24L01_REG_RX_ADDR_PO + dataPipe), 
                         address, 
                         (uint16_t)(_aw + 2));
+
+        _setCEPin(true);
 
         log.logDebug("nRF24L01::setRxAddress() - STATUS reg: 0x%02X", statusReg);
     }
@@ -429,10 +433,22 @@ void nRF24L01::setRxAddress(int dataPipe, uint8_t * address) {
 void nRF24L01::setTxAddress(uint8_t * address) {
     uint8_t             statusReg;
 
+    _setCEPin(false);
+
     statusReg = _writeRegister(
                     NRF24L01_REG_TX_ADDR, 
                     address, 
                     (uint16_t)(_aw + 2));
+
+    /*
+    ** Set this for auto-ACK...
+    */
+    statusReg = _writeRegister(
+                    NRF24L01_REG_RX_ADDR_PO, 
+                    address, 
+                    (uint16_t)(_aw + 2));
+
+    _setCEPin(true);
 
     log.logDebug("nRF24L01::setTxAddress() - STATUS reg: 0x%02X", statusReg);
 }
