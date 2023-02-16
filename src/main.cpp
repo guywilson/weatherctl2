@@ -262,7 +262,7 @@ int main(int argc, char ** argv) {
     txBuffer[0] = (char)(NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG);
 	txBuffer[1] = 0;
 
-    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
+    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 2);
 
     if (rtn < 0) {
         log.logError(
