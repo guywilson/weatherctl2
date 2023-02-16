@@ -245,6 +245,8 @@ int main(int argc, char ** argv) {
         return -1;
     }
 
+	PosixThread::sleep(PosixThread::milliseconds, 500);
+
 	rtn = read_register(hspi, NRF24L01_REG_CONFIG, rxBuffer, 1);
 
     if (rtn < 0) {
