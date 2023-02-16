@@ -245,7 +245,7 @@ int main(int argc, char ** argv) {
 	PosixThread::sleep(PosixThread::milliseconds, 100);
 
     txBuffer[0] = (char)(NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG);
-	txBuffer[1] = (char)0x7F;
+	txBuffer[1] = (char)0x7D;
 
     rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 2);
 
