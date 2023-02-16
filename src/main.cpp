@@ -260,6 +260,7 @@ int main(int argc, char ** argv) {
     log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
 
     txBuffer[0] = (char)(NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG);
+	txBuffer[1] = 0;
 
     rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
 
@@ -271,7 +272,7 @@ int main(int argc, char ** argv) {
         return -1;
     }
 
-    log.logDebug("Read back CONFIG reg: 0x%02X", rxBuffer[0]);
+    log.logDebug("Read back CONFIG reg: 0x%02X", rxBuffer[1]);
 
     lgSpiClose(hspi);
     lgGpioFree(hGPIO, CEPin);
