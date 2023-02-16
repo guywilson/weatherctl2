@@ -245,8 +245,9 @@ int main(int argc, char ** argv) {
 	PosixThread::sleep(PosixThread::milliseconds, 100);
 
     txBuffer[0] = (char)(NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG);
+	txBuffer[1] = (char)0x7F;
 
-    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
+    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 2);
 
     if (rtn < 0) {
         log.logError(
@@ -257,34 +258,10 @@ int main(int argc, char ** argv) {
     }
 
     log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
-
-    txBuffer[0] = (char)(0X7F);
-
-    rtn = lgSpiWrite(hspi, txBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
 
     txBuffer[0] = (char)(NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG);
 
     rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-    log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
-
-    rtn = lgSpiRead(hspi, rxBuffer, 1);
 
     if (rtn < 0) {
         log.logError(
