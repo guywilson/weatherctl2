@@ -177,8 +177,8 @@ int main(int argc, char ** argv) {
 	}
 
 #ifndef __APPLE__
-    RadioRxThread * rxThread = new RadioRxThread();
-    rxThread->start(false);
+    RadioRxThread * rxThread = new RadioRxThread(false);
+    rxThread->start();
 #endif
 
     while (1) {
