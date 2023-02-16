@@ -6,7 +6,7 @@
 class RadioRxThread : public PosixThread
 {
 public:
-    RadioRxThread() : PosixThread(true) {}
+    RadioRxThread() : PosixThread(false) {}
 
     void * run();
 };
