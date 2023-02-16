@@ -229,7 +229,7 @@ int main(int argc, char ** argv) {
         return -1;
     }
 
-    log.logDebug("Read back CONFIG reg: 0x%02X", rxBuffer[1]);
+    log.logDebug("Read back CONFIG reg: 0x%02X", (uint8_t)rxBuffer[1]);
 
     lgSpiClose(hspi);
     lgGpioFree(hGPIO, CEPin);
