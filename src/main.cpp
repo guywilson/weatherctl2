@@ -12,7 +12,6 @@
 #include <pthread.h>
 #include <time.h>
 #include <signal.h>
-#include <syslog.h>
 
 #ifdef __APPLE__
 extern "C" {
@@ -38,9 +37,9 @@ extern "C" {
 
 using namespace std;
 
-void printUsage(char * pszAppName)
+void printUsage()
 {
-	printf("\n Usage: %s [OPTIONS]\n\n", pszAppName);
+	printf("\n Usage: wctl [OPTIONS]\n\n");
 	printf("  Options:\n");
 	printf("   -h/?             Print this help\n");
 	printf("   -version         Print the program version\n");
@@ -53,43 +52,15 @@ void printUsage(char * pszAppName)
 }
 
 int main(int argc, char ** argv) {
-	FILE *			fptr_pid;
-	char *			pszAppName;
 	char *			pszLogFileName = NULL;
 	char *			pszConfigFileName = NULL;
-	char			szPidFileName[PATH_MAX];
 	int				i;
 	bool			isDaemonised = false;
 	bool			isDumpConfig = false;
-	char			cwd[PATH_MAX];
 	int				defaultLoggingLevel = LOG_LEVEL_INFO | LOG_LEVEL_ERROR | LOG_LEVEL_FATAL;
 
 	CurrentTime::initialiseUptimeClock();
 	
-	pszAppName = strdup(argv[0]);
-
-    /*
-    ** Check privileges...
-    */
-	if (geteuid() != 0) {
-		printf("\n");
-		printf("********************************************************************************\n");
-        printf("** WARNING!                                                                   **\n");
-		printf("**                                                                            **\n");
-		printf("** In order to have the ability to use the SPI device, this software must     **\n");
-		printf("** be run as the root user!                                                   **\n");
-		printf("**                                                                            **\n");
-		printf("********************************************************************************\n");
-		printf("\n");
-	}
-
-	getcwd(cwd, sizeof(cwd));
-	
-	strcpy(szPidFileName, cwd);
-	strcat(szPidFileName, "/wctl.pid");
-
-	printf("\nRunning %s from %s\n", pszAppName, cwd);
-
 	if (argc > 1) {
 		for (i = 1;i < argc;i++) {
 			if (argv[i][0] == '-') {
@@ -106,43 +77,29 @@ int main(int argc, char ** argv) {
 					isDumpConfig = true;
 				}
 				else if (argv[i][1] == 'h' || argv[i][1] == '?') {
-					printUsage(pszAppName);
+					printUsage();
 					return 0;
 				}
 				else if (strcmp(&argv[i][1], "version") == 0) {
-					printf("%s Version: [%s], Build date: [%s]\n\n", pszAppName, getVersion(), getBuildDate());
+					printf("%s Version: [wctl], Build date: [%s]\n\n", getVersion(), getBuildDate());
 					return 0;
 				}
 				else {
 					printf("Unknown argument '%s'", &argv[i][0]);
-					printUsage(pszAppName);
+					printUsage();
 					return 0;
 				}
 			}
 		}
 	}
 	else {
-		printUsage(pszAppName);
+		printUsage();
 		return -1;
 	}
 
 	if (isDaemonised) {
 //		daemonise();
 	}
-
-	fptr_pid = fopen(szPidFileName, "wt");
-	
-	if (fptr_pid == NULL) {
-		fprintf(stderr, "Failed top open PID file\n");
-		fflush(stderr);
-	}
-	else {
-		fprintf(fptr_pid, "%d\n", getpid());
-		fclose(fptr_pid);
-	}
-	
-	openlog(pszAppName, LOG_PID|LOG_CONS, LOG_DAEMON);
-	syslog(LOG_INFO, "Started %s", pszAppName);
 
 	ConfigManager & cfg = ConfigManager::getInstance();
 	
