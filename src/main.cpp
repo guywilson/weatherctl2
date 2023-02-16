@@ -233,7 +233,7 @@ int main(int argc, char ** argv) {
 
 	PosixThread::sleep(PosixThread::milliseconds, 100);
 
-	txBuffer[0] = 0x7D;
+	txBuffer[0] = 0x0D;
 
 	rtn = write_register(hspi, NRF24L01_REG_CONFIG, txBuffer, 1);
 
