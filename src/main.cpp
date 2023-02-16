@@ -169,7 +169,7 @@ int setupRadio() {
         return -1;
     }
 
-    log.logDebug("Read back RF_CH reg: 0x%02X", (int)rxBuffer[0]);
+    log.logDebug("Read back RF_CH reg: %d", (int)rxBuffer[0]);
 
 	txBuffer[0] = NRF24L01_CFG_ENABLE_CRC | NRF24L01_CFG_CRC_2_BYTE;
 
