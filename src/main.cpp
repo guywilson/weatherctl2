@@ -14,6 +14,14 @@
 #include <signal.h>
 #include <syslog.h>
 
+#ifdef __APPLE__
+extern "C" {
+#include "dummy_lgpio.h"
+}
+#else
+#include <lgpio.h>
+#endif
+
 #include <strutils.h>
 
 #include "wctl_error.h"
@@ -22,6 +30,7 @@
 #include "configmgr.h"
 #include "posixthread.h"
 #include "threads.h"
+#include "nRF24L01.h"
 
 extern "C" {
 	#include "version.h"
@@ -176,14 +185,106 @@ int main(int argc, char ** argv) {
 		}
 	}
 
-#ifndef __APPLE__
-    RadioRxThread * rxThread = new RadioRxThread();
-    rxThread->start();
-#endif
+// #ifndef __APPLE__
+//     RadioRxThread * rxThread = new RadioRxThread();
+//     rxThread->start();
+// #endif
 
-    while (1) {
-        PosixThread::sleep(PosixThread::seconds, 5U);
+//     while (1) {
+//         PosixThread::sleep(PosixThread::seconds, 5U);
+//
+
+    int                 CEPin;
+    char                txBuffer[40];
+    char                rxBuffer[40];
+
+    int hspi = lgSpiOpen(
+					cfg.getValueAsInteger("radio.spiport"), 
+					cfg.getValueAsInteger("radio.spiport"), 
+					cfg.getValueAsInteger("radio.spifreq"), 
+					0);
+
+    log.logDebug("RadioRxThread::run() - Setting up nRF24L01 device...");
+
+    int hGPIO = lgGpiochipOpen(0);
+
+    if (hGPIO < 0) {
+        log.logError("nRF24L01::init() - Failed to open GPIO device: %s", lguErrorText(hGPIO));
+        return -1;
     }
+
+    CEPin = cfg.getValueAsInteger("radio.spicepin");
+
+    int rtn = lgGpioClaimOutput(hGPIO, 0, CEPin, 0);
+
+    if (rtn < 0) {
+        log.logError(
+            "nRF24L01::init() - Failed to claim pin %d as output: %s", 
+            CEPin, 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Claimed pin %d for output with return code %d", CEPin, rtn);
+
+	PosixThread::sleep(PosixThread::milliseconds, 100);
+
+    txBuffer[0] = (char)(NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG);
+
+    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
+
+    txBuffer[0] = (char)(0X7F);
+
+    rtn = lgSpiWrite(hspi, txBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    txBuffer[0] = (char)(NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG);
+
+    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
+
+    rtn = lgSpiRead(hspi, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Read back CONFIG reg: 0x%02X", rxBuffer[0]);
+
+    lgSpiClose(hspi);
+    lgGpioFree(hGPIO, CEPin);
+    lgGpiochipClose(hGPIO);
 
     return 0;
 }
