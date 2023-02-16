@@ -51,6 +51,10 @@ void printUsage()
 	printf("\n");
 }
 
+void setCEPin(int hgpio, int CEPin, bool state) {
+    lgGpioWrite(hgpio, CEPin, (state ? 1 : 0));
+}
+
 int read_register(int hSPI, int reg, char *rxBuf, int count)
 {
 	int i;
@@ -145,6 +149,8 @@ int setupRadio() {
 
     log.logDebug("Claimed pin %d for output with return code %d", CEPin, rtn);
 
+	setCEPin(hGPIO, CEPin, false);
+	
 	PosixThread::sleep(PosixThread::milliseconds, 100);
 
 	txBuffer[0] = 40;
