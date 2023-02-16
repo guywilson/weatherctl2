@@ -51,6 +51,38 @@ void printUsage()
 	printf("\n");
 }
 
+int read_register(int hSPI, int reg, char *rxBuf, int count)
+{
+   int i;
+   char txBuf[64];
+   char buf[64];
+
+   txBuf[0] = reg;
+   for (i=1; i<=count; i++) txBuf[i]=0;
+
+   i = lgSpiXfer(hSPI, txBuf, buf, count+1);
+
+   if (i >= 0)
+   {
+      for (i=0; i<count; i++) rxBuf[i] = buf[i+1];
+      return count;
+   }
+   return i;
+}
+
+int write_register(int hSPI, int reg, char *txBuf, int count)
+{
+   int i;
+   char buf[64];
+   char rxBuf[64];
+
+   buf[0] = NRF24L01_CMD_W_REGISTER | reg;
+   for (i=0; i<count; i++) buf[i+1] = txBuf[i];
+   i = lgSpiXfer(hSPI, buf, rxBuf, count+1);
+
+   return i;
+}
+
 int main(int argc, char ** argv) {
 	char *			pszLogFileName = NULL;
 	char *			pszConfigFileName = NULL;
@@ -155,8 +187,8 @@ int main(int argc, char ** argv) {
 	int					spiPort;
 	int					spiChannel;
 	int					spiFreq;
-    char                txBuffer[40];
-    char                rxBuffer[40];
+    char                txBuffer[64];
+    char                rxBuffer[64];
 
 	spiPort = cfg.getValueAsInteger("radio.spiport");
 	spiChannel = cfg.getValueAsInteger("radio.spichannel");
@@ -201,25 +233,9 @@ int main(int argc, char ** argv) {
 
 	PosixThread::sleep(PosixThread::milliseconds, 100);
 
-    txBuffer[0] = (char)(NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG);
-	txBuffer[1] = (char)0x7D;
+	txBuffer[0] = 0x7D;
 
-    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 2);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-    log.logDebug("STATUS reg: 0x%02X", rxBuffer[0]);
-
-    txBuffer[0] = NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG;
-	txBuffer[1] = 0;
-
-    rtn = lgSpiXfer(hspi, txBuffer, rxBuffer, 2);
+	rtn = write_register(hspi, NRF24L01_REG_CONFIG, txBuffer, 1);
 
     if (rtn < 0) {
         log.logError(
@@ -229,7 +245,17 @@ int main(int argc, char ** argv) {
         return -1;
     }
 
-    log.logDebug("Read back CONFIG reg: 0x%02X", (int)rxBuffer[1]);
+	rtn = read_register(hspi, NRF24L01_REG_CONFIG, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Read back CONFIG reg: 0x%02X", (int)rxBuffer[0]);
 
     lgSpiClose(hspi);
     lgGpioFree(hGPIO, CEPin);
