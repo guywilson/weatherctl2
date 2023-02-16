@@ -53,34 +53,155 @@ void printUsage()
 
 int read_register(int hSPI, int reg, char *rxBuf, int count)
 {
-   int i;
-   char txBuf[64];
-   char buf[64];
+	int i;
+	char txBuf[64];
+	char buf[64];
 
-   txBuf[0] = reg;
-   for (i=1; i<=count; i++) txBuf[i]=0;
+	txBuf[0] = NRF24L01_CMD_R_REGISTER | reg;
+	
+	for (i = 1; i <= count; i++) {
+		txBuf[i] = 0;
+	}
 
-   i = lgSpiXfer(hSPI, txBuf, buf, count+1);
+	i = lgSpiXfer(hSPI, txBuf, buf, count+1);
 
-   if (i >= 0)
-   {
-      for (i=0; i<count; i++) rxBuf[i] = buf[i+1];
-      return count;
-   }
-   return i;
+	if (i >= 0) {
+		for (i = 0; i < count; i++) {
+			rxBuf[i] = buf[i+1];
+		}
+
+		return count;
+	}
+
+	return i;
 }
 
 int write_register(int hSPI, int reg, char *txBuf, int count)
 {
-   int i;
-   char buf[64];
-   char rxBuf[64];
+	int i;
+	char buf[64];
+	char rxBuf[64];
 
-   buf[0] = NRF24L01_CMD_W_REGISTER | reg;
-   for (i=0; i<count; i++) buf[i+1] = txBuf[i];
-   i = lgSpiXfer(hSPI, buf, rxBuf, count+1);
+	buf[0] = NRF24L01_CMD_W_REGISTER | reg;
 
-   return i;
+	for (i = 0; i < count; i++) {
+		buf[i + 1] = txBuf[i];
+	}
+
+	i = lgSpiXfer(hSPI, buf, rxBuf, count + 1);
+
+	return i;
+}
+
+int setupRadio() {
+    int                 CEPin;
+	int					spiPort;
+	int					spiChannel;
+	int					spiFreq;
+    char                txBuffer[64];
+    char                rxBuffer[64];
+
+	ConfigManager & cfg = ConfigManager::getInstance();
+	Logger & log = Logger::getInstance();
+
+	spiPort = cfg.getValueAsInteger("radio.spiport");
+	spiChannel = cfg.getValueAsInteger("radio.spichannel");
+	spiFreq = cfg.getValueAsInteger("radio.spifreq");
+
+	log.logDebug("Opening SPI device %d on channel %d with clk freq %d", spiPort, spiChannel, spiFreq);
+
+    int hspi = lgSpiOpen(
+					spiPort, 
+					spiChannel, 
+					spiFreq, 
+					0);
+
+    if (hspi < 0) {
+        log.logError("Failed to open SPI device: %s", lguErrorText(hspi));
+		return -1;
+    }
+
+    log.logDebug("Setting up nRF24L01 device...");
+
+    int hGPIO = lgGpiochipOpen(0);
+
+    if (hGPIO < 0) {
+        log.logError("Failed to open GPIO device: %s", lguErrorText(hGPIO));
+        return -1;
+    }
+
+    CEPin = cfg.getValueAsInteger("radio.spicepin");
+
+    int rtn = lgGpioClaimOutput(hGPIO, 0, CEPin, 0);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to claim pin %d as output: %s", 
+            CEPin, 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Claimed pin %d for output with return code %d", CEPin, rtn);
+
+	PosixThread::sleep(PosixThread::milliseconds, 100);
+
+	txBuffer[0] = 40;
+
+	rtn = write_register(hspi, NRF24L01_REG_RF_CH, txBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+	rtn = read_register(hspi, NRF24L01_REG_RF_CH, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Read back RF_CH reg: 0x%02X", (int)rxBuffer[0]);
+
+	txBuffer[0] = NRF24L01_CFG_ENABLE_CRC | NRF24L01_CFG_CRC_2_BYTE;
+
+	rtn = write_register(hspi, NRF24L01_REG_CONFIG, txBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+	PosixThread::sleep(PosixThread::milliseconds, 500);
+
+	rtn = read_register(hspi, NRF24L01_REG_CONFIG, rxBuffer, 1);
+
+    if (rtn < 0) {
+        log.logError(
+            "Failed to transfer SPI data: %s", 
+            lguErrorText(rtn));
+
+        return -1;
+    }
+
+    log.logDebug("Read back CONFIG reg: 0x%02X", (int)rxBuffer[0]);
+
+    lgSpiClose(hspi);
+    lgGpioFree(hGPIO, CEPin);
+    lgGpiochipClose(hGPIO);
+
+	return 0;
 }
 
 int main(int argc, char ** argv) {
@@ -183,85 +304,7 @@ int main(int argc, char ** argv) {
 //         PosixThread::sleep(PosixThread::seconds, 5U);
 //
 
-    int                 CEPin;
-	int					spiPort;
-	int					spiChannel;
-	int					spiFreq;
-    char                txBuffer[64];
-    char                rxBuffer[64];
-
-	spiPort = cfg.getValueAsInteger("radio.spiport");
-	spiChannel = cfg.getValueAsInteger("radio.spichannel");
-	spiFreq = cfg.getValueAsInteger("radio.spifreq");
-
-	log.logDebug("Opening SPI device %d on channel %d with clk freq %d", spiPort, spiChannel, spiFreq);
-
-    int hspi = lgSpiOpen(
-					spiPort, 
-					spiChannel, 
-					spiFreq, 
-					0);
-
-    if (hspi < 0) {
-        log.logError("Failed to open SPI device: %s", lguErrorText(hspi));
-		return -1;
-    }
-
-    log.logDebug("Setting up nRF24L01 device...");
-
-    int hGPIO = lgGpiochipOpen(0);
-
-    if (hGPIO < 0) {
-        log.logError("Failed to open GPIO device: %s", lguErrorText(hGPIO));
-        return -1;
-    }
-
-    CEPin = cfg.getValueAsInteger("radio.spicepin");
-
-    int rtn = lgGpioClaimOutput(hGPIO, 0, CEPin, 0);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to claim pin %d as output: %s", 
-            CEPin, 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-    log.logDebug("Claimed pin %d for output with return code %d", CEPin, rtn);
-
-	PosixThread::sleep(PosixThread::milliseconds, 100);
-
-	txBuffer[0] = NRF24L01_CFG_ENABLE_CRC | NRF24L01_CFG_CRC_2_BYTE;
-
-	rtn = write_register(hspi, NRF24L01_REG_CONFIG, txBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-	PosixThread::sleep(PosixThread::milliseconds, 500);
-
-	rtn = read_register(hspi, NRF24L01_REG_CONFIG, rxBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-    log.logDebug("Read back CONFIG reg: 0x%02X", (int)rxBuffer[0]);
-
-    lgSpiClose(hspi);
-    lgGpioFree(hGPIO, CEPin);
-    lgGpiochipClose(hGPIO);
+	setupRadio();
 
     return 0;
 }
