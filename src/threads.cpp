@@ -35,8 +35,8 @@ typedef struct {
 weather_packet_t;
 
 void * RadioRxThread::run() {
-    bool                go = true;
     int                 hspi;
+    int                 counter = 0;
     uint8_t             rxBuffer[32];
     uint8_t             deviceAddress[5];
     uint8_t             dataRate;
@@ -95,7 +95,7 @@ void * RadioRxThread::run() {
 
     radio.startListening();
         
-    while (go) {
+    while (counter < 10) {
         radio.receive(rxBuffer);
 
         memcpy(&weather, rxBuffer, sizeof(weather_packet_t));
@@ -109,7 +109,11 @@ void * RadioRxThread::run() {
         printf("\tWind direction:   %d\n\n", weather.windDirection);
 
         sleep(seconds, 4U);
+
+        counter++;
     }
+
+    radio.stopListening();
 
     return NULL;
 }
