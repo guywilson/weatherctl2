@@ -195,21 +195,35 @@ int main(int argc, char ** argv) {
 //
 
     int                 CEPin;
+	int					spiPort;
+	int					spiChannel;
+	int					spiFreq;
     char                txBuffer[40];
     char                rxBuffer[40];
 
+	spiPort = cfg.getValueAsInteger("radio.spiport");
+	spiChannel = cfg.getValueAsInteger("radio.spichannel");
+	spiFreq = cfg.getValueAsInteger("radio.spifreq");
+
+	log.logDebug("Opening SPI device %d on channel %d with clk freq %d", spiPort, spiChannel, spiFreq);
+
     int hspi = lgSpiOpen(
-					cfg.getValueAsInteger("radio.spiport"), 
-					cfg.getValueAsInteger("radio.spiport"), 
-					cfg.getValueAsInteger("radio.spifreq"), 
+					spiPort, 
+					spiChannel, 
+					spiFreq, 
 					0);
 
-    log.logDebug("RadioRxThread::run() - Setting up nRF24L01 device...");
+    if (hspi < 0) {
+        log.logError("Failed to open SPI device: %s", lguErrorText(hspi));
+		return -1;
+    }
+
+    log.logDebug("Setting up nRF24L01 device...");
 
     int hGPIO = lgGpiochipOpen(0);
 
     if (hGPIO < 0) {
-        log.logError("nRF24L01::init() - Failed to open GPIO device: %s", lguErrorText(hGPIO));
+        log.logError("Failed to open GPIO device: %s", lguErrorText(hGPIO));
         return -1;
     }
 
@@ -219,7 +233,7 @@ int main(int argc, char ** argv) {
 
     if (rtn < 0) {
         log.logError(
-            "nRF24L01::init() - Failed to claim pin %d as output: %s", 
+            "Failed to claim pin %d as output: %s", 
             CEPin, 
             lguErrorText(rtn));
 
