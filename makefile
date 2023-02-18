@@ -30,8 +30,8 @@ PRECOMPILE = @ mkdir -p $(BUILD) $(DEP)
 POSTCOMPILE = @ mv -f $(DEP)/$*.Td $(DEP)/$*.d
 
 CPPFLAGS = -c -O1 -Wall -pedantic -std=c++11 -I/Users/guy/Library/include
-CFLAGS = -c -O1 -Wall -pedantic -I/Users/guy/Library/include
-MGFLAGS=-DMG_ENABLE_SSL
+CFLAGS = -c -Wall -pedantic -I/Users/guy/Library/include
+#MGFLAGS=-DMG_ENABLE_SSL
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
@@ -39,7 +39,7 @@ STDLIBS = -pthread -lstdc++
 EXTLIBS = -lstrutils
 
 COMPILE.cpp = $(CPP) $(CPPFLAGS) $(DEPFLAGS) $(MGFLAGS) -o $@
-COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) $(MGFLAGS) -o $@
+COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
 LINK.o = $(LINKER) -L/Users/guy/Library/lib $(STDLIBS) -o $@
 
 CSRCFILES = $(wildcard $(SOURCE)/*.c)
