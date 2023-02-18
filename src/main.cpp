@@ -32,7 +32,8 @@ extern "C" {
 #include "nRF24L01.h"
 
 extern "C" {
-	#include "version.h"
+#include "NRF24.h"
+#include "version.h"
 }
 
 using namespace std;
@@ -51,121 +52,29 @@ void printUsage()
 	printf("\n");
 }
 
-void setCEPin(int hgpio, int CEPin, bool state) {
-    lgGpioWrite(hgpio, CEPin, (state ? 1 : 0));
-}
-
-int read_register(int hSPI, int reg, char *rxBuf, int count)
-{
-	int i;
-	char txBuf[64];
-	char buf[64];
-
-	txBuf[0] = NRF24L01_CMD_R_REGISTER | reg;
-	
-	for (i = 1; i <= count; i++) {
-		txBuf[i] = 0;
-	}
-
-	i = lgSpiXfer(hSPI, txBuf, buf, count+1);
-
-	if (i >= 0) {
-		for (i = 0; i < count; i++) {
-			rxBuf[i] = buf[i+1];
-		}
-
-		return count;
-	}
-
-	return i;
-}
-
-int write_register(int hSPI, int reg, char *txBuf, int count)
-{
-	int i;
-	char buf[64];
-	char rxBuf[64];
-
-	buf[0] = NRF24L01_CMD_W_REGISTER | reg;
-
-	for (i = 0; i < count; i++) {
-		buf[i + 1] = txBuf[i];
-	}
-
-	i = lgSpiXfer(hSPI, buf, rxBuf, count + 1);
-
-	return i;
-}
-
 int setupRadio() {
-    int                 CEPin;
-	int					spiPort;
-	int					spiChannel;
-	int					spiFreq;
     char                txBuffer[64];
     char                rxBuffer[64];
+	nrf_t				nrf;
 
 	ConfigManager & cfg = ConfigManager::getInstance();
 	Logger & log = Logger::getInstance();
 
-	spiPort = cfg.getValueAsInteger("radio.spiport");
-	spiChannel = cfg.getValueAsInteger("radio.spichannel");
-	spiFreq = cfg.getValueAsInteger("radio.spifreq");
+	nrf.CE 				= cfg.getValueAsInteger("radio.spicepin");
+	nrf.spi_device 		= cfg.getValueAsInteger("radio.spidevice");
+	nrf.spi_channel 	= cfg.getValueAsInteger("radio.spichannel");
+	nrf.spi_speed 		= cfg.getValueAsInteger("radio.spifreq");
+	nrf.mode 			= NRF_RX;   // primary mode (RX or TX)
+	nrf.channel 		= 40;       // radio channel
+	nrf.payload 		= 8;       	// message size in bytes
+	nrf.pad 			= 32;       // value used to pad short messages
+	nrf.address_bytes 	= 5; 		// RX/TX address length in bytes
+	nrf.crc_bytes 		= 2;     	// number of CRC bytes
+	nrf.PTX 			= 0;        // RX or TX
 
-	log.logDebug("Opening SPI device %d on channel %d with clk freq %d", spiPort, spiChannel, spiFreq);
+	NRF_init(&nrf);
 
-    int hspi = lgSpiOpen(
-					spiPort, 
-					spiChannel, 
-					spiFreq, 
-					0);
-
-    if (hspi < 0) {
-        log.logError("Failed to open SPI device: %s", lguErrorText(hspi));
-		return -1;
-    }
-
-    log.logDebug("Setting up nRF24L01 device...");
-
-    int hGPIO = lgGpiochipOpen(0);
-
-    if (hGPIO < 0) {
-        log.logError("Failed to open GPIO device: %s", lguErrorText(hGPIO));
-        return -1;
-    }
-
-    CEPin = cfg.getValueAsInteger("radio.spicepin");
-
-    int rtn = lgGpioClaimOutput(hGPIO, 0, CEPin, 0);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to claim pin %d as output: %s", 
-            CEPin, 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-    log.logDebug("Claimed pin %d for output with return code %d", CEPin, rtn);
-
-	setCEPin(hGPIO, CEPin, false);
-	
-	PosixThread::sleep(PosixThread::milliseconds, 100);
-
-	txBuffer[0] = 40;
-
-	rtn = write_register(hspi, NRF24L01_REG_RF_CH, txBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-	rtn = read_register(hspi, NRF24L01_REG_RF_CH, rxBuffer, 1);
+	int rtn = NRF_read_register(&nrf, NRF24L01_REG_RF_CH, rxBuffer, 1);
 
     if (rtn < 0) {
         log.logError(
@@ -177,21 +86,7 @@ int setupRadio() {
 
     log.logDebug("Read back RF_CH reg: %d", (int)rxBuffer[0]);
 
-	txBuffer[0] = NRF24L01_CFG_ENABLE_CRC | NRF24L01_CFG_CRC_2_BYTE;
-
-	rtn = write_register(hspi, NRF24L01_REG_CONFIG, txBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError(
-            "Failed to transfer SPI data: %s", 
-            lguErrorText(rtn));
-
-        return -1;
-    }
-
-	PosixThread::sleep(PosixThread::milliseconds, 500);
-
-	rtn = read_register(hspi, NRF24L01_REG_CONFIG, rxBuffer, 1);
+	rtn = NRF_read_register(&nrf, NRF24L01_REG_CONFIG, rxBuffer, 1);
 
     if (rtn < 0) {
         log.logError(
@@ -203,9 +98,7 @@ int setupRadio() {
 
     log.logDebug("Read back CONFIG reg: 0x%02X", (int)rxBuffer[0]);
 
-    lgSpiClose(hspi);
-    lgGpioFree(hGPIO, CEPin);
-    lgGpiochipClose(hGPIO);
+	NRF_term(&nrf);
 
 	return 0;
 }
