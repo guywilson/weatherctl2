@@ -29,7 +29,7 @@ PRECOMPILE = @ mkdir -p $(BUILD) $(DEP)
 # postcompile step
 POSTCOMPILE = @ mv -f $(DEP)/$*.Td $(DEP)/$*.d
 
-CPPFLAGS = -c -O1 -Wall -pedantic -std=c++11 -I/Users/guy/Library/include
+CPPFLAGS = -c -Wall -pedantic -std=c++11 -I/Users/guy/Library/include
 CFLAGS = -c -Wall -pedantic -I/Users/guy/Library/include
 #MGFLAGS=-DMG_ENABLE_SSL
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
