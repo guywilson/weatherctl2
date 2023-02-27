@@ -23,7 +23,7 @@ void Logger::initLogger(const char * pszLogFileName, int logLevel)
     this->loggingLevel = logLevel;
 
     if (pszLogFileName != NULL && strlen(pszLogFileName) > 0) {
-        this->lfp = fopen(pszLogFileName, "wt");
+        this->lfp = fopen(pszLogFileName, "a");
 
         if (this->lfp == NULL) {
 	        syslog(LOG_INFO, "Failed to open log file %s", pszLogFileName);
