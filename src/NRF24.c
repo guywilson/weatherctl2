@@ -534,10 +534,37 @@ void setupNRF24L01() {
     qInit(getTxQueue(), 8U);
 }
 
+void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
+    target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3.3;
+    target->batteryTemperature = (float)source->rawBatteryTemperature;
+    target->solarVoltage = ((float)source->rawSolarVolts / 4096) * 6.0;
+    target->chipTemperature = 27.0 - ((float)source->rawChipTemperature - 0.706) / 0.001721;
+
+    /*
+    ** TMP117 temperature
+    */
+    target->temperature = (float)source->rawTemperature * 0.0078125;
+    
+    /*
+    ** SHT4x humidity
+    */
+    target->humidity = -6.0f + ((float)source->rawHumidity * 0.0019074);
+
+    if (target->humidity < 0.0) {
+        target->humidity = 0.0;
+    }
+    else if (target->humidity > 100.0) {
+        target->humidity = 100.0;
+    }
+
+    target->pressure = (float)source->rawPressure;
+}
+
 void * NRF_listen_thread(void * pParms) {
     int                 rtn;
     char                rxBuffer[64];
     weather_packet_t    pkt;
+    weather_transform_t tr;
 
     nrf_p nrf = (nrf_p)pParms;
 
@@ -573,10 +600,12 @@ void * NRF_listen_thread(void * pParms) {
 
             memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
+            _transformWeatherPacket(&tr, &pkt);
+
             lgLogDebug(lgGetHandle(), "Got weather data:");
-            lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", pkt.temperature);
-            lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", pkt.pressure);
-            lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", pkt.humidity);
+            lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
+            lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
+            lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", tr.humidity);
 
             pxtSleep(milliseconds, 250);
         }
