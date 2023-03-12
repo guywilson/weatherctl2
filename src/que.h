@@ -10,7 +10,16 @@ typedef struct {
 }
 que_item_t;
 
-struct _que_handle_t;
+struct _que_handle_t {
+    que_item_t *    pQueue;
+
+    uint32_t        queueLength;
+    uint32_t        numItems;
+
+    int             headIndex;
+    int             tailIndex;
+};
+
 typedef struct _que_handle_t            que_handle_t;
 
 int             qInit(que_handle_t * hque, uint32_t size);

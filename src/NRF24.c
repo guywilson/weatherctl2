@@ -23,6 +23,7 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 #include "logger.h"
 #include "posixthread.h"
 #include "utils.h"
+#include "que.h"
 
 /*
    Note that RX and TX addresses must match
@@ -54,6 +55,7 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 */
 
 static nrf_t            nrf;
+que_handle_t            txQueue;
 
 
 int NRF_xfer(nrf_p nrf, char * txBuf, char * rxBuf, int count) {
@@ -491,10 +493,16 @@ void NRF_term(nrf_p nrf) {
    lgGpioFree(nrf->chip, nrf->CE);
 
    lgGpiochipClose(nrf->chip);
+
+   qDestroy(getTxQueue());
 }
 
 nrf_p getNRFReference() {
     return &nrf;
+}
+
+que_handle_t * getTxQueue() {
+    return &txQueue;
 }
 
 void setupNRF24L01() {
@@ -522,6 +530,8 @@ void setupNRF24L01() {
 	nrf.address_bytes 	= 5;
 	nrf.crc_bytes 		= 2;
 	nrf.PTX 			= 0;
+
+    qInit(getTxQueue(), 8U);
 }
 
 void * NRF_listen_thread(void * pParms) {

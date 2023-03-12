@@ -8,16 +8,6 @@
 #include "logger.h"
 #include "que.h"
 
-struct _que_handle_t {
-    que_item_t *    pQueue;
-
-    uint32_t        queueLength;
-    uint32_t        numItems;
-
-    int             headIndex;
-    int             tailIndex;
-};
-
 int qInit(que_handle_t * hque, uint32_t size) {
     hque->pQueue = (que_item_t *)malloc(sizeof(que_item_t) * size);
 

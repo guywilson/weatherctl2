@@ -90,5 +90,4 @@ void daemonise() {
 	
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
-//	close(STDERR_FILENO);
 }
