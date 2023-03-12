@@ -15,13 +15,14 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __APPLE__
-#include "dummy_lgpio.h"
-#else
 #include <lgpio.h>
-#endif
 
+#include "nRF24L01.h"
 #include "NRF24.h"
+#include "cfgmgr.h"
+#include "logger.h"
+#include "posixthread.h"
+#include "utils.h"
 
 /*
    Note that RX and TX addresses must match
@@ -52,9 +53,11 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
    +----------+--------+---------+--------+-----------------------------+
 */
 
+static nrf_t            nrf;
+
 
 int NRF_xfer(nrf_p nrf, char * txBuf, char * rxBuf, int count) {
-   return lgSpiXfer(nrf->spih, txBuf, rxBuf, count);
+    return lgSpiXfer(nrf->spih, txBuf, rxBuf, count);
 }
 
 int NRF_read_register(nrf_p nrf, int reg, char * rxBuf, int count) {
@@ -238,7 +241,7 @@ void NRF_set_fixed_width(char *data, int *count, int width, int pad) {
    *count = width;
 }
 
-void NRF_send(nrf_p nrf, char *data, int count) {
+void NRF_send(nrf_p nrf, char * data, int count) {
    int         status;
    int         i;
    int         n = count;
@@ -265,7 +268,7 @@ void NRF_send(nrf_p nrf, char *data, int count) {
    NRF_power_up_tx(nrf);
 }
 
-void NRF_ack_payload(nrf_p nrf, char *data, int count) {
+void NRF_ack_payload(nrf_p nrf, char * data, int count) {
    int         i;
    char        txBuf[256];
 
@@ -278,7 +281,7 @@ void NRF_ack_payload(nrf_p nrf, char *data, int count) {
    NRF_xfer(nrf, txBuf, NULL, count+1);
 }
 
-void NRF_set_local_address(nrf_p nrf, char *addr) {
+void NRF_set_local_address(nrf_p nrf, const char * addr) {
    int         i;
    int         n;
    char        txBuf[64];
@@ -293,12 +296,12 @@ void NRF_set_local_address(nrf_p nrf, char *addr) {
 
    NRF_unset_CE(nrf);
 
-   NRF_write_register(nrf, NRF_RX_ADDR_P1, txBuf, n);
+   NRF_write_register(nrf, NRF_RX_ADDR_P0, txBuf, n);
 
    NRF_set_CE(nrf);
 }
 
-void NRF_set_remote_address(nrf_p nrf, char *addr) {
+void NRF_set_remote_address(nrf_p nrf, const char * addr) {
    int         i;
    int         n;
    char        txBuf[64];
@@ -321,7 +324,7 @@ void NRF_set_remote_address(nrf_p nrf, char *addr) {
 
 int NRF_data_ready(nrf_p nrf) {
    int         status;
-   char        rxBuf[8];
+   char        rxBuf = 0;
 
    status = NRF_get_status(nrf);
 
@@ -329,16 +332,11 @@ int NRF_data_ready(nrf_p nrf) {
       return 1;
    }
 
-   NRF_read_register(nrf, NRF_FIFO_STATUS, rxBuf, 1);
+   NRF_read_register(nrf, NRF_FIFO_STATUS, &rxBuf, 1);
 
-   status = rxBuf[0];
+   status = rxBuf;
 
-   if (status & NRF_FRX_EMPTY) {
-      return 0; 
-   }
-   else {
-      return 1;
-   }
+   return ((status & NRF_FRX_EMPTY) ? 0 : 1);
 }
 
 int NRF_is_sending(nrf_p nrf) {
@@ -359,7 +357,7 @@ int NRF_is_sending(nrf_p nrf) {
    return 0;
 }
 
-char *NRF_get_payload(nrf_p nrf, char *rxBuf) {
+char *NRF_get_payload(nrf_p nrf, char * rxBuf) {
    char        txBuf[64];
    int         count;
 
@@ -426,42 +424,63 @@ void NRF_set_defaults(nrf_p nrf) {
 }
 
 void NRF_init(nrf_p nrf) {
-   char txBuf[256];
+    char txBuf[256];
 
-   nrf->chip = lgGpiochipOpen(0);
+    nrf->chip = lgGpiochipOpen(0);
 
-   lgGpioClaimOutput(nrf->chip, 0, nrf->CE, 0);
+    lgGpioClaimOutput(nrf->chip, 0, nrf->CE, 0);
 
-   NRF_unset_CE(nrf);
+    NRF_unset_CE(nrf);
 
-   nrf->spih = lgSpiOpen(
-                     nrf->spi_channel, 
-                     nrf->spi_device, 
-                     nrf->spi_speed, 
-                     0);
+    nrf->spih = lgSpiOpen(
+                nrf->spi_channel, 
+                nrf->spi_device, 
+                nrf->spi_speed, 
+                0);
 
-   NRF_set_channel(nrf, nrf->channel);
+    NRF_set_channel(nrf, nrf->channel);
 
-   NRF_set_payload(nrf, nrf->payload);
+    NRF_set_payload(nrf, nrf->payload);
 
-   NRF_set_pad_value(nrf, nrf->pad);
+    NRF_set_pad_value(nrf, nrf->pad);
 
-   NRF_set_address_bytes(nrf, nrf->address_bytes);
+    NRF_set_address_bytes(nrf, nrf->address_bytes);
 
-   NRF_set_CRC_bytes(nrf, nrf->crc_bytes);
+    NRF_set_CRC_bytes(nrf, nrf->crc_bytes);
 
-   nrf->PTX = 0;
+    nrf->PTX = 0;
 
-   NRF_power_down(nrf);
+    NRF_power_down(nrf);
 
-   txBuf[0] = 0x1F;
+    txBuf[0] = 0x2A;
 
-   NRF_write_register(nrf, NRF_SETUP_RETR, txBuf, 1);
+    NRF_write_register(nrf, NRF_SETUP_RETR, txBuf, 1);
 
-   NRF_flush_rx(nrf);
-   NRF_flush_tx(nrf);
+    txBuf[0] = 
+        NRF24L01_RF_SETUP_RF_POWER_MEDIUM | 
+        NRF24L01_RF_SETUP_RF_LNA_GAIN_ON | 
+        nrf->data_rate;
 
-   NRF_power_up_rx(nrf);
+    NRF_write_register(nrf, NRF24L01_REG_RF_SETUP, txBuf, 1);
+
+    txBuf[0] = 0x01;
+
+    NRF_write_register(nrf, NRF24L01_REG_EN_AA, txBuf, 1);
+
+    txBuf[0] = 
+        NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN | 
+        NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK;
+
+    NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
+
+    txBuf[0] = 0x01;
+
+    NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
+
+    NRF_flush_rx(nrf);
+    NRF_flush_tx(nrf);
+
+    NRF_power_up_rx(nrf);
 }
 
 void NRF_term(nrf_p nrf) {
@@ -474,77 +493,86 @@ void NRF_term(nrf_p nrf) {
    lgGpiochipClose(nrf->chip);
 }
 
-// int main(int argc, char *argv[])
-// {
-//    int sending;
-//    int count;
-//    double end_time;
-//    char *ver = "l";
-//    char s[256];
-//    nrf_t nrf;
+nrf_p getNRFReference() {
+    return &nrf;
+}
 
-//    if (argc > 1) sending = 1;
-//    else sending = 0;
+void setupNRF24L01() {
+    int                 dataRate;
 
-//    NRF_set_defaults(&nrf);
+    dataRate = strcmp(
+                cfgGetValue(
+                    cfgGetHandle(), 
+                    "radio.baud"), 
+                "2MHz") == 0 ? 
+                NRF24L01_RF_SETUP_DATA_RATE_2MBPS : 
+                NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
 
-//    nrf.CE = 27;
+	nrf.CE 				= cfgGetValueAsInteger(cfgGetHandle(), "spi.cepin");
+	nrf.spi_device 		= cfgGetValueAsInteger(cfgGetHandle(), "spi.device");
+	nrf.spi_channel 	= cfgGetValueAsInteger(cfgGetHandle(), "spi.channel");
+	nrf.spi_speed 		= cfgGetValueAsInteger(cfgGetHandle(), "spi.freq");
+	nrf.mode 			= NRF_RX;
+	nrf.channel 		= cfgGetValueAsInteger(cfgGetHandle(), "radio.channel");
+	nrf.payload 		= NRF_MAX_PAYLOAD;
+    nrf.data_rate       = dataRate;
+    nrf.local_address   = cfgGetValue(cfgGetHandle(), "radio.localaddress");
+    nrf.remote_address  = cfgGetValue(cfgGetHandle(), "radio.remoteaddress");
+	nrf.pad 			= 32;
+	nrf.address_bytes 	= 5;
+	nrf.crc_bytes 		= 2;
+	nrf.PTX 			= 0;
+}
 
-//    nrf.payload = NRF_ACK_PAYLOAD;
-//    nrf.pad = '*';
-//    nrf.address_bytes=3;
-//    nrf.crc_bytes = 2;
+void * NRF_listen_thread(void * pParms) {
+    int                 rtn;
+    char                rxBuffer[64];
+    weather_packet_t    pkt;
 
-//    NRF_init(&nrf);
+    nrf_p nrf = (nrf_p)pParms;
 
-//    NRF_show_registers(&nrf);
+    lgLogInfo(lgGetHandle(), "Opening NRF24L01 device");
 
-//    end_time = lguTime() + 3600;
+    NRF_init(nrf);
 
-//    if (sending)
-//    {
-//       count = 0;
+    NRF_set_local_address(nrf, nrf->local_address);
+    NRF_set_remote_address(nrf, nrf->remote_address);
 
-//       NRF_set_local_address(&nrf, "h1");
-//       NRF_set_remote_address(&nrf, "h2");
+	rtn = NRF_read_register(nrf, NRF24L01_REG_CONFIG, rxBuffer, 1);
 
-//       while (lguTime() < end_time)
-//       {
-//          //printf("%s\n", NRF_format_FIFO_STATUS(&nrf, s));
-//          //printf("%s\n", NRF_format_OBSERVE_TX(&nrf, s));
+    if (rtn < 0) {
+        lgLogError(lgGetHandle(), "Failed to transfer SPI data: %s\n", lguErrorText(rtn));
 
-//          if (!NRF_is_sending(&nrf))
-//          {
-//             printf("%s> %s\n", ver, test_words[count]);
-//             NRF_send(&nrf, test_words[count], strlen(test_words[count]));
-//             count += 1;
-//             if (count >= number_of_test_words) count = 0;
-//          }
+        return NULL;
+    }
 
-//          lguSleep(0.5);
+    lgLogInfo(lgGetHandle(), "Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
 
-//       }
-//    }
-//    else
-//    {
-//       NRF_set_local_address(&nrf, "h2");
-//       NRF_set_remote_address(&nrf,"h1");
+    if (rxBuffer[0] == 0x00) {
+        lgLogError(lgGetHandle(), "Config read back as 0x00, device is probably not plugged in?\n\n");
+        return NULL;
+    }
 
-//       while (lguTime() < end_time)
-//       {
-//          //printf("%s\n", NRF_format_FIFO_STATUS(&nrf, s));
-//          //printf("%s\n", NRF_format_OBSERVE_TX(&nrf, s));
+    while (1) {
+        while (NRF_data_ready(nrf)) {
+            //NRF_ack_payload(nrf, data, dataLength);
 
-//          while (NRF_data_ready(&nrf))
-//          {
-//             printf("%s< %s\n", ver, NRF_get_payload(&nrf, s));
-//          }
-//          lguSleep(0.5);
-//       }
-//    }
+            NRF_get_payload(nrf, rxBuffer);
 
-//    NRF_term(&nrf);
+            hexDump(rxBuffer, NRF_MAX_PAYLOAD);
 
-//    return 0;
-// }
+            memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
+            lgLogDebug(lgGetHandle(), "Got weather data:");
+            lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", pkt.temperature);
+            lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", pkt.pressure);
+            lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", pkt.humidity);
+
+            pxtSleep(milliseconds, 250);
+        }
+
+        pxtSleep(seconds, 2);
+    }
+
+    return NULL;
+}

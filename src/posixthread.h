@@ -1,57 +1,31 @@
-#include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <pthread.h>
 
-#include "logger.h"
+#ifndef __POSIX_THREAD
+#define __POSIX_THREAD
 
-#ifndef _INCL_POSIXTHREAD
-#define _INCL_POSIXTHREAD
+typedef struct {
+    pthread_t           tid;
+    bool                isRestartable;
+    void *              pThreadParm;
 
-class PosixThread
-{
-private:
-    pthread_t           _tid;
-    bool                _isRestartable = false;
-    void *              _threadParameters = NULL;
+    void *              (* run)(void *);
+}
+pxt_handle_t;
 
-    Logger & log = Logger::getInstance();
+typedef enum {
+    hours,
+    minutes,
+    seconds,
+    milliseconds,
+    microseconds
+}
+TimeUnit;
 
-protected:
-    virtual void *      getThreadParameters() {
-        return this->_threadParameters;
-    }
-
-public:
-    PosixThread();
-    PosixThread(bool isRestartable);
-
-    ~PosixThread();
-
-    enum TimeUnit {
-        hours,
-        minutes,
-        seconds,
-        milliseconds,
-        microseconds
-    };
-
-    /*
-    ** Sleep for t milliseconds...
-    */
-    static void         sleep(TimeUnit u, unsigned long t);
-
-    virtual bool        start();
-    virtual bool        start(void * p);
-
-    virtual void        stop();
-
-    virtual pthread_t   getID() {
-        return this->_tid;
-    }
-
-    virtual bool        isRestartable() {
-        return this->_isRestartable;
-    }
-
-    virtual void *      run() = 0;
-};
+void    pxtSleep(TimeUnit u, uint64_t t);
+void    pxtCreate(pxt_handle_t * hpxt, void * (* thread)(void *), bool isRestartable);
+int     pxtStart(pxt_handle_t * hpxt, void * pParms);
+void    pxtStop(pxt_handle_t * hpxt);
 
 #endif

@@ -20,32 +20,27 @@ TARGET = wctl2
 
 # Tools
 VBUILD = vbuild
-CPP = g++
 C = gcc
-LINKER = g++
+LINKER = gcc
 
 # postcompile step
 PRECOMPILE = @ mkdir -p $(BUILD) $(DEP)
 # postcompile step
 POSTCOMPILE = @ mv -f $(DEP)/$*.Td $(DEP)/$*.d
 
-CPPFLAGS = -c -Wall -pedantic -std=c++11 -I/Users/guy/Library/include
-CFLAGS = -c -Wall -pedantic -I/Users/guy/Library/include
-#MGFLAGS=-DMG_ENABLE_SSL
+CFLAGS = -c -O2 -Wall -pedantic -I/Users/guy/Library/include
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
-STDLIBS = -pthread -lstdc++
-EXTLIBS = -lstrutils
+STDLIBS =
+EXTLIBS = -llgpio -lstrutils
 
-COMPILE.cpp = $(CPP) $(CPPFLAGS) $(DEPFLAGS) $(MGFLAGS) -o $@
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
-LINK.o = $(LINKER) -L/Users/guy/Library/lib $(STDLIBS) -o $@
+LINK.o = $(LINKER) $(STDLIBS) -o $@
 
 CSRCFILES = $(wildcard $(SOURCE)/*.c)
-CPPSRCFILES = $(wildcard $(SOURCE)/*.cpp)
-OBJFILES = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(CSRCFILES)) $(patsubst $(SOURCE)/%.cpp, $(BUILD)/%.o, $(CPPSRCFILES))
-DEPFILES = $(patsubst $(SOURCE)/%.c, $(DEP)/%.d, $(CSRCFILES)) $(patsubst $(SOURCE)/%.cpp, $(DEP)/%.d, $(CPPSRCFILES))
+OBJFILES = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(CSRCFILES))
+DEPFILES = $(patsubst $(SOURCE)/%.c, $(DEP)/%.d, $(CSRCFILES))
 
 all: $(TARGET)
 
@@ -58,12 +53,6 @@ $(BUILD)/%.o: $(SOURCE)/%.c
 $(BUILD)/%.o: $(SOURCE)/%.c $(DEP)/%.d
 	$(PRECOMPILE)
 	$(COMPILE.c) $<
-	$(POSTCOMPILE)
-
-$(BUILD)/%.o: $(SOURCE)/%.cpp
-$(BUILD)/%.o: $(SOURCE)/%.cpp $(DEP)/%.d
-	$(PRECOMPILE)
-	$(COMPILE.cpp) $<
 	$(POSTCOMPILE)
 
 .PRECIOUS = $(DEP)/%.d

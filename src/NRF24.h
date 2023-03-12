@@ -132,6 +132,10 @@ typedef struct {
    int pad;           // value used to pad short messages
    int address_bytes; // RX/TX address length in bytes
    int crc_bytes;     // number of CRC bytes
+   int data_rate;     // Air data rate (1Mbps or 2Mbps)
+
+   const char * local_address;
+   const char * remote_address;
 
    int spih;
    int chip;
@@ -141,6 +145,17 @@ typedef struct {
 nrf_t;
 
 typedef nrf_t *         nrf_p;
+
+typedef struct {
+    float               temperature;
+    float               pressure;
+    float               humidity;
+    float               rainfall;
+    float               windspeed;
+    uint16_t            windDirection;
+}
+weather_packet_t;
+
 
 int         NRF_xfer(nrf_p nrf, char * txBuf, char * rxBuf, int count);
 int         NRF_read_register(nrf_p nrf, int reg, char * rxBuf, int count);
@@ -160,8 +175,8 @@ void        NRF_set_CRC_bytes(nrf_p nrf, int crc_bytes);
 void        NRF_set_fixed_width(char *data, int *count, int width, int pad);
 void        NRF_send(nrf_p nrf, char *data, int count);
 void        NRF_ack_payload(nrf_p nrf, char *data, int count);
-void        NRF_set_local_address(nrf_p nrf, char *addr);
-void        NRF_set_remote_address(nrf_p nrf, char *addr);
+void        NRF_set_local_address(nrf_p nrf, const char * addr);
+void        NRF_set_remote_address(nrf_p nrf, const char * addr);
 int         NRF_data_ready(nrf_p nrf);
 int         NRF_is_sending(nrf_p nrf);
 char *      NRF_get_payload(nrf_p nrf, char *rxBuf);
@@ -170,5 +185,9 @@ void        NRF_flush_rx(nrf_p nrf);
 void        NRF_set_defaults(nrf_p nrf);
 void        NRF_init(nrf_p nrf);
 void        NRF_term(nrf_p nrf);
+
+nrf_p       getNRFReference();
+void        setupNRF24L01();
+void *      NRF_listen_thread(void * pParms);
 
 #endif

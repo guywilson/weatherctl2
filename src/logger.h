@@ -1,13 +1,9 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <pthread.h>
+#include <stdbool.h>
 
-#include "currenttime.h"
+#ifndef __INCL_LOGGER
+#define __INCL_LOGGER
 
-#ifndef _INCL_LOGGER
-#define _INCL_LOGGER
-
-#define MAX_LOG_LENGTH          250
+#define MAX_LOG_LENGTH          512
 
 /*
 ** Supported log levels...
@@ -20,48 +16,22 @@
 
 #define LOG_LEVEL_ALL           (LOG_LEVEL_INFO | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_ERROR | LOG_LEVEL_FATAL)
 
-class Logger
-{
-public:
-    static Logger & getInstance() {
-        static Logger instance;
-        return instance;
-    }
+struct _log_handle_t;
+typedef struct _log_handle_t        log_handle_t;
 
-private:
-    Logger() {}
-
-    FILE *          lfp;
-    int             loggingLevel;
-    char            buffer[512];
-    pthread_mutex_t mutex;
-
-    CurrentTime     currentTime;
-
-    int             logLevel_atoi(const char * pszLoggingLevel);
-    int             logMessage(int logLevel, bool addCR, const char * fmt, va_list args);
-
-public:
-    ~Logger();
-
-    void        initLogger(const char * pszLogFileName, int logLevel);
-    void        initLogger(const char * pszLogFileName, const char * pszLoggingLevel);
-    void        initLogger(int logLevel);
-    
-    void        closeLogger();
-
-    int         getLogLevel();
-    void        setLogLevel(int logLevel);
-    void        setLogLevel(const char * pszLogLevel);
-    bool        isLogLevel(int logLevel);
-
-    void        newline();
-    int         logInfo(const char * fmt, ...);
-    int         logStatus(const char * fmt, ...);
-    int         logDebug(const char * fmt, ...);
-    int         logDebugNoCR(const char * fmt, ...);
-    int         logError(const char * fmt, ...);
-    int         logFatal(const char * fmt, ...);
-};
+log_handle_t *  lgGetHandle();
+int             lgOpen(const char * pszLogFile, const char * pszLogFlags);
+int             lgOpenStdout(const char * pszLogFlags);
+void            lgClose(log_handle_t * hlog);
+void            lgSetLogLevel(log_handle_t * hlog, int logLevel);
+int             lgGetLogLevel(log_handle_t * hlog);
+bool            lgCheckLogLevel(log_handle_t * hlog, int logLevel);
+void            lgNewline(log_handle_t * hlog);
+int             lgLogInfo(log_handle_t * hlog, const char * fmt, ...);
+int             lgLogStatus(log_handle_t * hlog, const char * fmt, ...);
+int             lgLogDebug(log_handle_t * hlog, const char * fmt, ...);
+int             lgLogDebugNoCR(log_handle_t * hlog, const char * fmt, ...);
+int             lgLogError(log_handle_t * hlog, const char * fmt, ...);
+int             lgLogFatal(log_handle_t * hlog, const char * fmt, ...);
 
 #endif
