@@ -465,19 +465,19 @@ void NRF_init(nrf_p nrf) {
 
     NRF_write_register(nrf, NRF24L01_REG_RF_SETUP, txBuf, 1);
 
-    txBuf[0] = 0x01;
+    txBuf[0] = 0x00;
 
     NRF_write_register(nrf, NRF24L01_REG_EN_AA, txBuf, 1);
 
-    txBuf[0] = 
-        NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN | 
-        NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK;
+    // txBuf[0] = 
+    //     NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN | 
+    //     NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK;
 
-    NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
+    // NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
 
-    txBuf[0] = 0x01;
+    // txBuf[0] = 0x01;
 
-    NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
+    // NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
 
     NRF_flush_rx(nrf);
     NRF_flush_tx(nrf);
@@ -600,12 +600,14 @@ void * NRF_listen_thread(void * pParms) {
 
             memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
-            _transformWeatherPacket(&tr, &pkt);
+            if (pkt.chipID != strtoul(cfgGetValue(cfgGetHandle(), "station.chipID"), NULL, 10)) {
+                _transformWeatherPacket(&tr, &pkt);
 
-            lgLogDebug(lgGetHandle(), "Got weather data:");
-            lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
-            lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
-            lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", tr.humidity);
+                lgLogDebug(lgGetHandle(), "Got weather data:");
+                lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
+                lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
+                lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", tr.humidity);
+            }
 
             pxtSleep(milliseconds, 250);
         }
