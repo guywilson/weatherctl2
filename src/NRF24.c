@@ -600,14 +600,14 @@ void * NRF_listen_thread(void * pParms) {
 
             memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
-            if (pkt.chipID != strtoul(cfgGetValue(cfgGetHandle(), "station.chipID"), NULL, 10)) {
+//            if (pkt.chipID != strtoul(cfgGetValue(cfgGetHandle(), "station.chipID"), NULL, 10)) {
                 _transformWeatherPacket(&tr, &pkt);
 
                 lgLogDebug(lgGetHandle(), "Got weather data:");
                 lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %.2f", tr.humidity);
-            }
+//            }
 
             pxtSleep(milliseconds, 250);
         }
