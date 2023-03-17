@@ -594,8 +594,8 @@ void * NRF_listen_thread(void * pParms) {
 
     stationID = cfgGetValueAsUnsigned(cfgGetHandle(), "radio.stationid");
 
-    lgLogInfo(lgGetHandle(), "Read station ID from config as: 0x08X", stationID);
-    
+    lgLogInfo(lgGetHandle(), "Read station ID from config as: 0x%08X", stationID);
+
     while (1) {
         while (NRF_data_ready(nrf)) {
             //NRF_ack_payload(nrf, data, dataLength);
