@@ -300,12 +300,36 @@ bool cfgGetValueAsBoolean(cfg_handle_t * hcfg, const char * key) {
     return ((strcmp(pszValue, "yes") == 0 || strcmp(pszValue, "true") == 0 || strcmp(pszValue, "on") == 0) ? true : false);
 }
 
-int cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
+int32_t cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
     const char *        pszValue;
+    int32_t             value;
 
     pszValue = cfgGetValue(hcfg, key);
 
-    return atoi(pszValue);
+    if (strncmp(pszValue, "0x", 2) == 0 || strncmp(pszValue, "0X", 2) == 0) {
+        value = (int32_t)strtol(&pszValue[2], NULL, 16);
+    }
+    else {
+        value = (int32_t)strtol(&pszValue[2], NULL, 10);
+    }
+
+    return value;
+}
+
+uint32_t cfgGetValueAsUnsigned(cfg_handle_t * hcfg, const char * key) {
+    const char *        pszValue;
+    uint32_t             value;
+
+    pszValue = cfgGetValue(hcfg, key);
+
+    if (strncmp(pszValue, "0x", 2) == 0 || strncmp(pszValue, "0X", 2) == 0) {
+        value = (uint32_t)strtoul(&pszValue[2], NULL, 16);
+    }
+    else {
+        value = (uint32_t)strtoul(&pszValue[2], NULL, 10);
+    }
+
+    return value;
 }
 
 void cfgDumpConfig(cfg_handle_t * hcfg) {
