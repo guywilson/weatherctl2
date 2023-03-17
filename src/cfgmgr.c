@@ -300,7 +300,15 @@ bool cfgGetValueAsBoolean(cfg_handle_t * hcfg, const char * key) {
     return ((strcmp(pszValue, "yes") == 0 || strcmp(pszValue, "true") == 0 || strcmp(pszValue, "on") == 0) ? true : false);
 }
 
-int32_t cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
+int cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
+    const char *        pszValue;
+
+    pszValue = cfgGetValue(hcfg, key);
+
+    return atoi(pszValue);
+}
+
+int32_t cfgGetValueAsLongInteger(cfg_handle_t * hcfg, const char * key) {
     const char *        pszValue;
     int32_t             value;
 
@@ -316,7 +324,7 @@ int32_t cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
     return value;
 }
 
-uint32_t cfgGetValueAsUnsigned(cfg_handle_t * hcfg, const char * key) {
+uint32_t cfgGetValueAsLongUnsigned(cfg_handle_t * hcfg, const char * key) {
     const char *        pszValue;
     uint32_t             value;
 
