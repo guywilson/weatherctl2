@@ -614,6 +614,9 @@ void * NRF_listen_thread(void * pParms) {
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
             }
+            else {
+                lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
+            }
 
             pxtSleep(milliseconds, 250);
         }
