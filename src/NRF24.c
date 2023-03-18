@@ -548,8 +548,7 @@ void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * so
     /*
     ** SHT4x temperature & humidity
     */
-    target->temperature2 = -45.0f + ((float)source->rawHumidity[0] * 0.0026703);
-    target->humidity = -6.0f + ((float)source->rawHumidity[1] * 0.0019074);
+    target->humidity = -6.0f + ((float)source->rawHumidity * 0.0019074);
 
     if (target->humidity < 0.0) {
         target->humidity = 0.0;
@@ -558,7 +557,7 @@ void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * so
         target->humidity = 100.0;
     }
 
-    target->pressure = (float)source->rawPressure;
+    target->pressure = (float)((float)source->pressurePa / 100.0f);
 }
 
 void * NRF_listen_thread(void * pParms) {
@@ -611,7 +610,7 @@ void * NRF_listen_thread(void * pParms) {
 
                 lgLogDebug(lgGetHandle(), "Got weather data:");
                 lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
-                lgLogDebug(lgGetHandle(), "\tTemperature: %.2f (%.1f)", tr.temperature, tr.temperature2);
+                lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
             }
