@@ -148,6 +148,7 @@ nrf_t;
 
 typedef nrf_t *         nrf_p;
 
+#pragma pack(push, 1)
 typedef struct {
     uint32_t            chipID;                     // 0x00 - ID of the RP2040
 
@@ -165,6 +166,7 @@ typedef struct {
     uint16_t            rawWindDir;                 // 0x1A - Raw wind direction
 }
 weather_packet_t;
+#pragma pack(pop)
 
 typedef struct {
     float               batteryVoltage;
