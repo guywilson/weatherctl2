@@ -24,6 +24,7 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 #include "posixthread.h"
 #include "utils.h"
 #include "que.h"
+#include "icp10125.h"
 
 /*
    Note that RX and TX addresses must match
@@ -557,7 +558,11 @@ void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * so
         target->humidity = 100.0;
     }
 
-    target->pressure = (float)((float)source->pressurePa / 100.0f);
+    target->pressure = 
+        (float)((float)icp10125_get_pressure(
+                            source->rawICPTemperature, 
+                            source->rawICPPressure) / 
+                            100.0f);
 }
 
 void * NRF_listen_thread(void * pParms) {
