@@ -25,6 +25,7 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 #include "utils.h"
 #include "que.h"
 #include "icp10125.h"
+#include "veml7700.h"
 
 /*
    Note that RX and TX addresses must match
@@ -563,6 +564,8 @@ void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * so
                             source->rawICPTemperature, 
                             source->rawICPPressure) / 
                             100.0f);
+
+    target->lux = computeLux(source->rawLux, true);
 }
 
 void * NRF_listen_thread(void * pParms) {
@@ -618,6 +621,7 @@ void * NRF_listen_thread(void * pParms) {
                 lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
+                lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
             }
             else {
                 lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
