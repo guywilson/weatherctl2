@@ -2,12 +2,28 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define VEML7700_RESOLUTION                 0.0072f
+#define VEML7700_MAX_RESOLUTION             0.0036f
+#define VEML7700_MAX_IT                     800.0f
+#define VEML7700_MAX_GAIN                   2.0f
+
+/*
+** These are the parameters we've set on the sensor
+** attached to the Pico...
+*/
+#define VEML7700_SELECTED_IT                100.0f
+#define VEML7700_SELECTED_GAIN              0.125f
+
+static float getResolution(void) {
+  return (
+        VEML7700_MAX_RESOLUTION * 
+        (VEML7700_MAX_IT / VEML7700_SELECTED_IT) * 
+        (VEML7700_MAX_GAIN / VEML7700_SELECTED_GAIN));
+}
 
 float computeLux(uint16_t rawALS, bool corrected) {
     float           lux;
     
-    lux = VEML7700_RESOLUTION * (float)rawALS;
+    lux = getResolution() * (float)rawALS;
 
     if (corrected) {
         lux = 
