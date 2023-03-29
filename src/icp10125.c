@@ -81,8 +81,6 @@ uint32_t icp10125_get_pressure(uint16_t rawTemperature, uint32_t rawPressure) {
     float               t;
     inv_invpres_t *     s = &icpConfigParms;
 
-    lgLogDebug(lgGetHandle(), "rawT: %u, rawP: %u", (uint32_t)rawTemperature, rawPressure);
-    
     t = (float)(rawTemperature - 32768);
 
     s->LUT_values[0] = s->LUT_lower + (float)(s->sensor_constants[0] * t * t) * s->quadr_factor; 

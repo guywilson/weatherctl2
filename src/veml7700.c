@@ -2,6 +2,19 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+/*
+** Common light levels
+** -------------------
+**
+** Bright Summer Day:           100,000 Lux (~10,000 footcandles)
+** Full Daylight:               10,000 Lux (~1,000 footcandles)
+** Overcast Day:                1,000 Lux (~100 footcandles)
+** Traditional Office Lighting: 300-500 Lux (30-50 footcandles)
+** Common Stairway:             50-100 Lux (5-10 footcandles)
+** Twilight:                    10 Lux (1 footcandle)
+** Full Moon:                   <1 Lux (<0.1 footcandle)
+*/
+
 #define VEML7700_MAX_RESOLUTION             0.0036f
 #define VEML7700_MAX_IT                     800.0f
 #define VEML7700_MAX_GAIN                   2.0f
