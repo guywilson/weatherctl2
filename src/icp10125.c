@@ -30,7 +30,7 @@ inv_invpres_t               icpConfigParms;
 ** These have been previously read from our ICP10125 pressure sensor,
 ** other sensors will have different calibration values...
 */
-const uint16_t otpValues[4] = {0x013D, 0x013D, 0x013D, 0x013D};
+const uint16_t otpValues[4] = {0x013D, 0x01FE, 0x02D8, 0x0F05};
 
 void icp10125_calculate_conversion_constants(inv_invpres_t * s) { 
     s->C = 
