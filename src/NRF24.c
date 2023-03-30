@@ -539,7 +539,6 @@ void setupNRF24L01() {
 void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3.3;
     target->batteryTemperature = (float)source->rawBatteryTemperature;
-    target->solarVoltage = ((float)source->rawSolarVolts / 4096) * 6.0;
     target->chipTemperature = 27.0 - ((float)source->rawChipTemperature - 0.706) / 0.001721;
 
     /*
@@ -618,6 +617,7 @@ void * NRF_listen_thread(void * pParms) {
 
                 lgLogDebug(lgGetHandle(), "Got weather data:");
                 lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
+                lgLogDebug(lgGetHandle(), "\tRP2040 temp: %.2f", tr.chipTemperature);
                 lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);

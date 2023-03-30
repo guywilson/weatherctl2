@@ -170,7 +170,6 @@ weather_packet_t;
 
 typedef struct {
     float               batteryVoltage;
-    float               solarVoltage;
     float               chipTemperature;
     float               batteryTemperature;
     
