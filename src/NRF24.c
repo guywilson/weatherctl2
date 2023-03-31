@@ -537,7 +537,7 @@ void setupNRF24L01() {
 }
 
 void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
-    const float conversionFactor = 3.3f / (float)(1 << 12);
+    const float conversionFactor = 0.000806f;
 
     target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3.3;
     target->batteryTemperature = (float)source->rawBatteryTemperature;
