@@ -52,7 +52,7 @@ static char * _getUptime(uint32_t uptimeSeconds) {
 	return szUptime;
 }
 
-static void _updateTime() {
+static void _updateTime(void) {
 	struct timeval		tv;
 	time_t				t;
 
@@ -64,11 +64,11 @@ static void _updateTime() {
 	_localTime = localtime(&t);
 }
 
-void tmInitialiseUptimeClock() {
+void tmInitialiseUptimeClock(void) {
 	_startTime = time(0);
 }
 
-char * tmGetUptime() {
+char * tmGetUptime(void) {
 	time_t		t;
 	uint32_t	seconds;
 
@@ -113,38 +113,38 @@ char * tmGetTimeStamp(bool includeMicroseconds) {
 	return szTimeStr;
 }
 
-char * tmGetSimpleTimeStamp() {
+char * tmGetSimpleTimeStamp(void) {
 	return tmGetTimeStamp(false);
 }
 
-int tmGetYear() {
+int tmGetYear(void) {
 	return _localTime->tm_year + 1900;
 }
 
-int tmGetMonth() {
+int tmGetMonth(void) {
 	return _localTime->tm_mon + 1;
 }
 
-int tmGetDay() {
+int tmGetDay(void) {
 	return _localTime->tm_mday;
 }
 
-int tmGetDayOfWeek() {
+int tmGetDayOfWeek(void) {
 	return _localTime->tm_wday + 1;
 }
 
-int tmGetHour() {
+int tmGetHour(void) {
 	return _localTime->tm_hour;
 }
 
-int tmGetMinute() {
+int tmGetMinute(void) {
 	return _localTime->tm_min;
 }
 
-int tmGetSecond() {
+int tmGetSecond(void) {
 	return _localTime->tm_sec;
 }
 
-int tmGetMicrosecond() {
+int tmGetMicrosecond(void) {
 	return _usec;
 }

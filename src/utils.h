@@ -4,6 +4,6 @@
 #define __INCL_UTILS
 
 void        hexDump(void * buffer, uint32_t bufferLen);
-void        daemonise();
+void        daemonise(void);
 
 #endif

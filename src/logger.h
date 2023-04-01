@@ -19,7 +19,7 @@
 struct _log_handle_t;
 typedef struct _log_handle_t        log_handle_t;
 
-log_handle_t *  lgGetHandle();
+log_handle_t *  lgGetHandle(void);
 int             lgOpen(const char * pszLogFile, const char * pszLogFlags);
 int             lgOpenStdout(const char * pszLogFlags);
 void            lgClose(log_handle_t * hlog);

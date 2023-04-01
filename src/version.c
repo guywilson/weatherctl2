@@ -1,14 +1,14 @@
 #include "version.h"
 
-#define __BDATE__      "2023-02-28 09:20:47"
-#define __BVERSION__   "0.1.002"
+#define __BDATE__      "2023-04-01 15:27:12"
+#define __BVERSION__   "0.1.003"
 
-const char * getVersion()
+const char * getVersion(void)
 {
     return __BVERSION__;
 }
 
-const char * getBuildDate()
+const char * getBuildDate(void)
 {
     return __BDATE__;
 }

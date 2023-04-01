@@ -121,7 +121,7 @@ int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const char * fmt
     return bytesWritten;
 }
 
-log_handle_t * lgGetHandle() {
+log_handle_t * lgGetHandle(void) {
     static log_handle_t *       pLog = NULL;
 
     if (pLog == NULL) {

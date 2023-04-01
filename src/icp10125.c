@@ -59,7 +59,7 @@ void icp10125_calculate_conversion_constants(inv_invpres_t * s) {
         s->C); 
 }
 
-void icp10125_init() {
+void icp10125_init(void) {
     int                 i;
     inv_invpres_t *     s = &icpConfigParms;
 

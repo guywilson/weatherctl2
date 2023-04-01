@@ -46,7 +46,7 @@ void hexDump(void * buffer, uint32_t bufferLen)
 }
 
 
-void daemonise() {
+void daemonise(void) {
 	pid_t			pid;
 	pid_t			sid;
 

@@ -20,7 +20,7 @@
 
 static nrf_t               nrf;
 
-void printUsage() {
+void printUsage(void) {
 	printf("\n Usage: wctl [OPTIONS]\n\n");
 	printf("  Options:\n");
 	printf("   -h/?             Print this help\n");

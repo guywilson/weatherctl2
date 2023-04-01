@@ -499,15 +499,15 @@ void NRF_term(nrf_p nrf) {
    qDestroy(getTxQueue());
 }
 
-nrf_p getNRFReference() {
+nrf_p getNRFReference(void) {
     return &nrf;
 }
 
-que_handle_t * getTxQueue() {
+que_handle_t * getTxQueue(void) {
     return &txQueue;
 }
 
-void setupNRF24L01() {
+void setupNRF24L01(void) {
     int                 dataRate;
 
     dataRate = strcmp(

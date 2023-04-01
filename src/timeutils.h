@@ -14,17 +14,17 @@
 #define FRIDAY							6
 #define SATURDAY						7
 
-void tmInitialiseUptimeClock();
-char * tmGetUptime();
-char * tmGetTimeStamp(bool includeMicroseconds);
-char * tmGetSimpleTimeStamp();
-int tmGetYear();
-int tmGetMonth();
-int tmGetDay();
-int tmGetDayOfWeek();
-int tmGetHour();
-int tmGetMinute();
-int tmGetSecond();
-int tmGetMicrosecond();
+void    tmInitialiseUptimeClock(void);
+char *  tmGetUptime(void);
+char *  tmGetTimeStamp(bool includeMicroseconds);
+char *  tmGetSimpleTimeStamp(void);
+int     tmGetYear(void);
+int     tmGetMonth(void);
+int     tmGetDay(void);
+int     tmGetDayOfWeek(void);
+int     tmGetHour(void);
+int     tmGetMinute(void);
+int     tmGetSecond(void);
+int     tmGetMicrosecond(void);
 
 #endif

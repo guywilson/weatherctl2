@@ -24,7 +24,7 @@ struct _cfg_handle_t {
 
 static cfg_handle_t         _cfg;
 
-cfg_handle_t * cfgGetHandle() {
+cfg_handle_t * cfgGetHandle(void) {
     static cfg_handle_t *       pCfg = NULL;
 
     if (pCfg == NULL) {
