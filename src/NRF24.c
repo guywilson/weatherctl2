@@ -539,7 +539,7 @@ void setupNRF24L01(void) {
 void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     const float conversionFactor = 0.000806f;
 
-    target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3.3;
+    target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 5.0;
     target->batteryTemperature = (float)source->rawBatteryTemperature;
 
     lgLogDebug(lgGetHandle(), "Raw chip temp ADC: %u", (uint32_t)source->rawChipTemperature);
@@ -622,6 +622,7 @@ void * NRF_listen_thread(void * pParms) {
 
                 lgLogDebug(lgGetHandle(), "Got weather data:");
                 lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
+                lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
                 lgLogDebug(lgGetHandle(), "\tRP2040 temp: %.2f", tr.chipTemperature);
                 lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
