@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <postgresql@14/libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 
 #ifndef __INCL_PSQL
 #define __INCL_PSQL

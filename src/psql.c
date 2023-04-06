@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <postgresql@14/libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 
 #include "logger.h"
 #include "psql.h"
