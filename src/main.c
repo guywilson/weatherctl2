@@ -16,6 +16,7 @@
 #include "icp10125.h"
 #include "nRF24L01.h"
 #include "NRF24.h"
+#include "threads.h"
 #include "utils.h"
 
 static nrf_t               nrf;
@@ -90,7 +91,9 @@ int main(int argc, char ** argv) {
 	bool			    isDaemonised = false;
 	bool			    isDumpConfig = false;
 	const char *	    defaultLoggingLevel = "LOG_LEVEL_INFO | LOG_LEVEL_ERROR | LOG_LEVEL_FATAL";
+    que_handle_t        dbQueue;
     pxt_handle_t        nrfListenThread;
+    pxt_handle_t        dbUpdateThread;
 
     tmInitialiseUptimeClock();
 	
@@ -198,8 +201,13 @@ int main(int argc, char ** argv) {
     setupNRF24L01();
     icp10125_init();
 
+    qInit(&dbQueue, 10U);
+
     pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
     pxtStart(&nrfListenThread, getNRFReference());
+
+    pxtCreate(&dbUpdateThread, &db_update_thread, true);
+    pxtStart(&dbUpdateThread, &dbQueue);
 
     while (1) {
         pxtSleep(seconds, 5);

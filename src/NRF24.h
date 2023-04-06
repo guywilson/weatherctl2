@@ -218,6 +218,5 @@ void        NRF_term(nrf_p nrf);
 nrf_p           getNRFReference(void);
 que_handle_t *  getTxQueue(void);
 void            setupNRF24L01(void);
-void *          NRF_listen_thread(void * pParms);
 
 #endif
