@@ -28,12 +28,12 @@ PRECOMPILE = @ mkdir -p $(BUILD) $(DEP)
 # postcompile step
 POSTCOMPILE = @ mv -f $(DEP)/$*.Td $(DEP)/$*.d
 
-CFLAGS = -c -O2 -Wall -pedantic -I/Users/guy/Library/include
+CFLAGS = -c -O2 -Wall -pedantic -I/Users/guy/Library/include -I/opt/homebrew/Cellar/postgresql@14/14.7/include
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
-STDLIBS =
-EXTLIBS = -llgpio -lstrutils
+STDLIBS = -pthread
+EXTLIBS = -lcrypto -lpq -llgpio -lstrutils
 
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
 LINK.o = $(LINKER) $(STDLIBS) -o $@

@@ -610,8 +610,6 @@ void * NRF_listen_thread(void * pParms) {
 
     while (1) {
         while (NRF_data_ready(nrf)) {
-            //NRF_ack_payload(nrf, data, dataLength);
-
             NRF_get_payload(nrf, rxBuffer);
 
             hexDump(rxBuffer, NRF_MAX_PAYLOAD);
