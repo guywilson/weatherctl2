@@ -195,9 +195,7 @@ void * db_update_thread(void * pParms) {
 
             lgLogDebug(lgGetHandle(), "Issuing INSERT statement: %s", szInsertStr);
 
-            dbTransactionBegin(wctlConnection);
             dbExecute(wctlConnection, szInsertStr);
-            dbTransactionEnd(wctlConnection);
 
             pxtSleep(milliseconds, 250);
         }
