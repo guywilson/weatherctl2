@@ -193,8 +193,6 @@ void * db_update_thread(void * pParms) {
                 tr->windDirection
             );
 
-            lgLogDebug(lgGetHandle(), "Issuing INSERT statement: %s", szInsertStr);
-
             dbExecute(wctlConnection, szInsertStr);
 
             pxtSleep(milliseconds, 250);
