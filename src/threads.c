@@ -173,34 +173,34 @@ void * db_update_thread(void * pParms) {
     }
 
     while (true) {
-        while (!qGetQueLength(&dbq)) {
+        while (!qGetNumItems(&dbq)) {
             pxtSleep(milliseconds, 25);
         }
 
-        qGetItem(&dbq, &item);
+        if (qGetItem(&dbq, &item) != NULL) {
+            tr = (weather_transform_t *)item.item;
 
-        tr = (weather_transform_t *)item.item;
+            sprintf(
+                szInsertStr,
+                pszInsertStmt,
+                tmGetSimpleTimeStamp(),
+                tr->temperature,
+                tr->pressure,
+                tr->humidity,
+                tr->lux,
+                tr->rainfall,
+                tr->windspeed,
+                tr->windDirection
+            );
 
-        sprintf(
-            szInsertStr,
-            pszInsertStmt,
-            tmGetSimpleTimeStamp(),
-            tr->temperature,
-            tr->pressure,
-            tr->humidity,
-            tr->lux,
-            tr->rainfall,
-            tr->windspeed,
-            tr->windDirection
-        );
+            lgLogDebug(lgGetHandle(), "Issuing INSERT statement: %s", szInsertStr);
 
-        lgLogDebug(lgGetHandle(), "Issuing INSERT statement: %s", szInsertStr);
+            dbTransactionBegin(wctlConnection);
+            dbExecute(wctlConnection, szInsertStr);
+            dbTransactionEnd(wctlConnection);
 
-        dbTransactionBegin(wctlConnection);
-        dbExecute(wctlConnection, szInsertStr);
-        dbTransactionEnd(wctlConnection);
-
-        pxtSleep(milliseconds, 250);
+            pxtSleep(milliseconds, 250);
+        }
     }
 
     dbFinish(wctlConnection);

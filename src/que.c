@@ -44,6 +44,16 @@ uint32_t qGetQueLength(que_handle_t * hque) {
     return length;
 }
 
+uint32_t qGetNumItems(que_handle_t * hque) {
+    uint32_t            numItems;
+
+	pthread_mutex_lock(&_mutex);
+    numItems = hque->numItems;
+	pthread_mutex_unlock(&_mutex);
+
+    return numItems;
+}
+
 que_item_t * qGetItem(que_handle_t * hque, que_item_t * item) {
 	pthread_mutex_lock(&_mutex);
 
