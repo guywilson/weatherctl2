@@ -217,7 +217,7 @@ int cfgOpen(const char * pszConfigFileName) {
                             return -1;
                         }
 
-                        bytesRead = fread(pszCfgItem, propFileLength, 1, f);
+                        bytesRead = fread(pszCfgItem, 1, propFileLength, f);
 
                         if (bytesRead != propFileLength) {
                             fclose(f);
