@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <lgpio.h>
 #include <postgresql/libpq-fe.h>
@@ -11,13 +12,17 @@
 #include "logger.h"
 #include "cfgmgr.h"
 #include "posixthread.h"
+#include "timeutils.h"
 #include "psql.h"
 #include "que.h"
 #include "icp10125.h"
 #include "veml7700.h"
 #include "utils.h"
+#include "threads.h"
 
-que_handle_t            dbq;
+static que_handle_t            dbq;
+static pxt_handle_t            nrfListenThread;
+static pxt_handle_t            dbUpdateThread;
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     const float conversionFactor = 0.000806f;
@@ -57,11 +62,20 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 }
 
 void startThreads(void) {
+    qInit(&dbq, 10U);
 
+    pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
+    pxtStart(&nrfListenThread, NULL);
+
+    pxtCreate(&dbUpdateThread, &db_update_thread, true);
+    pxtStart(&dbUpdateThread, NULL);
 }
 
 void stopThreads(void) {
+    pxtStop(&dbUpdateThread);
+    pxtStop(&nrfListenThread);
 
+    qDestroy(&dbq);
 }
 
 void * NRF_listen_thread(void * pParms) {
@@ -70,8 +84,9 @@ void * NRF_listen_thread(void * pParms) {
     char                rxBuffer[64];
     weather_packet_t    pkt;
     weather_transform_t tr;
+    que_item_t          qItem;
 
-    nrf_p nrf = (nrf_p)pParms;
+    nrf_p nrf = getNRFReference();
 
     lgLogInfo(lgGetHandle(), "Opening NRF24L01 device");
 
@@ -110,6 +125,11 @@ void * NRF_listen_thread(void * pParms) {
             if (pkt.chipID == stationID) {
                 _transformWeatherPacket(&tr, &pkt);
 
+                qItem.item = &tr;
+                qItem.itemLength = sizeof(weather_transform_t);
+
+                qPutItem(&dbq, qItem);
+
                 lgLogDebug(lgGetHandle(), "Got weather data:");
                 lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
                 lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
@@ -133,10 +153,12 @@ void * NRF_listen_thread(void * pParms) {
 }
 
 void * db_update_thread(void * pParms) {
-    PGconn *            wctlConnection;
-    que_handle_t *      dbQueue;
-    
-    dbQueue = (que_handle_t *)pParms;
+    PGconn *                wctlConnection;
+    que_item_t              item;
+    weather_transform_t *   tr;
+    char                    szInsertStr[512];
+    const char *            pszInsertStmt = 
+                                "INSERT INTO weather_data (created, temperature, pressure, humidity, lux, rainfall, wind_speed, wind_direction) values (%s, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %s);";
 
     wctlConnection = dbConnect(
             cfgGetValue(cfgGetHandle(), "db.host"), 
@@ -151,17 +173,37 @@ void * db_update_thread(void * pParms) {
     }
 
     while (true) {
-        while (!qGetQueLength(dbQueue)) {
-            pxtSleep(milliseconds, 250);
+        while (!qGetQueLength(&dbq)) {
+            pxtSleep(milliseconds, 25);
         }
 
+        qGetItem(&dbq, &item);
+
+        tr = (weather_transform_t *)item.item;
+
+        sprintf(
+            szInsertStr,
+            pszInsertStmt,
+            tmGetSimpleTimeStamp(),
+            tr->temperature,
+            tr->pressure,
+            tr->humidity,
+            tr->lux,
+            tr->rainfall,
+            tr->windspeed,
+            tr->windDirection
+        );
+
+        lgLogDebug(lgGetHandle(), "Issuing INSERT statement: %s", szInsertStr);
+
         dbTransactionBegin(wctlConnection);
-        dbExecute(wctlConnection, "INSERT INTO weather_data;");
+        dbExecute(wctlConnection, szInsertStr);
         dbTransactionEnd(wctlConnection);
+
+        pxtSleep(milliseconds, 250);
     }
 
     dbFinish(wctlConnection);
-    qDestroy(dbQueue);
 
     return NULL;
 }
