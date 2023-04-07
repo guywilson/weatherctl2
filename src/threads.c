@@ -158,7 +158,7 @@ void * db_update_thread(void * pParms) {
     weather_transform_t *   tr;
     char                    szInsertStr[512];
     const char *            pszInsertStmt = 
-                                "INSERT INTO weather_data (created, temperature, pressure, humidity, lux, rainfall, wind_speed, wind_direction) values (%s, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %s);";
+                                "INSERT INTO weather_data (created, temperature, pressure, humidity, lux, rainfall, wind_speed, wind_direction) values ('%s', %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, 'NW');";
 
     wctlConnection = dbConnect(
             cfgGetValue(cfgGetHandle(), "db.host"), 
