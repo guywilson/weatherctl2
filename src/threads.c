@@ -157,8 +157,11 @@ void * db_update_thread(void * pParms) {
     que_item_t              item;
     weather_transform_t *   tr;
     char                    szInsertStr[512];
-    const char *            pszInsertStmt = 
+    char *                  timestamp;
+    const char *            pszWeatherInsertStmt = 
                                 "INSERT INTO weather_data (created, temperature, pressure, humidity, lux, rainfall, wind_speed, wind_direction) values ('%s', %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, 'NW');";
+    const char *            pszTelemetryInsertStmt = 
+                                "INSERT INTO telemetry_data (created, battery_voltage, battery_temperature, cpu_temperature) values ('%s', %.2f, %.2f, %.2f);";
 
     wctlConnection = dbConnect(
             cfgGetValue(cfgGetHandle(), "db.host"), 
@@ -180,10 +183,12 @@ void * db_update_thread(void * pParms) {
         if (qGetItem(&dbq, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
+            timestamp = tmGetSimpleTimeStamp();
+
             sprintf(
                 szInsertStr,
-                pszInsertStmt,
-                tmGetSimpleTimeStamp(),
+                pszWeatherInsertStmt,
+                timestamp,
                 tr->temperature,
                 tr->pressure,
                 tr->humidity,
@@ -191,6 +196,19 @@ void * db_update_thread(void * pParms) {
                 tr->rainfall,
                 tr->windspeed,
                 tr->windDirection
+            );
+
+            dbExecute(wctlConnection, szInsertStr);
+
+            pxtSleep(milliseconds, 100);
+
+            sprintf(
+                szInsertStr,
+                pszTelemetryInsertStmt,
+                timestamp,
+                tr->batteryVoltage,
+                tr->batteryTemperature,
+                tr->chipTemperature
             );
 
             dbExecute(wctlConnection, szInsertStr);
