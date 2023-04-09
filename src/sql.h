@@ -26,62 +26,62 @@ typedef struct {
 daily_summary_t;
 
 
-const char *            pszWeatherInsertStmt = 
-                            "INSERT INTO weather_data (\
-                                created, \
-                                temperature, \
-                                pressure, \
-                                humidity, \
-                                lux, \
-                                rainfall, \
-                                wind_speed, \
-                                wind_direction) \
-                            values (\
-                                '%s', \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                'NW');";
+const char * pszWeatherInsertStmt = 
+"INSERT INTO weather_data (\
+created, \
+temperature, \
+pressure, \
+humidity, \
+lux, \
+rainfall, \
+wind_speed, \
+wind_direction) \
+values (\
+'%s', \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+'NW');";
 
-const char *            pszTelemetryInsertStmt = 
-                            "INSERT INTO telemetry_data (\
-                                created, \
-                                battery_voltage, \
-                                battery_temperature, \
-                                cpu_temperature) \
-                            values (\
-                                '%s', \
-                                %.2f, \
-                                %.2f, \
-                                %.2f);";
+const char * pszTelemetryInsertStmt = 
+"INSERT INTO telemetry_data (\
+created, \
+battery_voltage, \
+battery_temperature, \
+cpu_temperature) \
+values (\
+'%s', \
+%.2f, \
+%.2f, \
+%.2f);";
 
-const char *            pszSummaryInsertStmt = 
-                            "INSERT INTO daily_summary (\
-                                created, \
-                                min_temperature, \
-                                max_temperature, \
-                                min_pressure, \
-                                max_pressure, \
-                                min_humidity, \
-                                max_humidity, \
-                                max_lux, \
-                                total_rainfall, \
-                                max_wind_speed, \
-                                max_wind_gust) \
-                            values (\
-                                '%s', \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f, \
-                                %.2f);";
+const char * pszSummaryInsertStmt = 
+"INSERT INTO daily_summary (\
+created, \
+min_temperature, \
+max_temperature, \
+min_pressure, \
+max_pressure, \
+min_humidity, \
+max_humidity, \
+max_lux, \
+total_rainfall, \
+max_wind_speed, \
+max_wind_gust) \
+values (\
+'%s', \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f, \
+%.2f);";
 
 #endif
