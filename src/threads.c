@@ -194,11 +194,11 @@ void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
     hour = tmGetHour();
 
     lgLogDebug(lgGetHandle(), "Adding rainfall for hour %d", hour);
-    
-    if (!ds->isHourAccounted[hour]) {
+
+    if (!(ds->isHourAccountedBitmap & (1 << hour))) {
         ds->total_rainfall += tr->rainfall;
 
-        ds->isHourAccounted[hour] = true;
+        ds->isHourAccountedBitmap |= (1 << hour);
     }
 }
 
@@ -241,6 +241,8 @@ void * db_update_thread(void * pParms) {
             hour = tmGetHour();
             timestamp = tmGetSimpleTimeStamp();
 
+            lgLogDebug(lgGetHandle(), "Inserting weather data");
+
             sprintf(
                 szInsertStr,
                 pszWeatherInsertStmt,
@@ -258,7 +260,7 @@ void * db_update_thread(void * pParms) {
 
             pxtSleep(milliseconds, 100);
 
-            lgLogDebug(lgGetHandle(), "Updating telemetry");
+            lgLogDebug(lgGetHandle(), "Inserting telemetry data");
 
             sprintf(
                 szInsertStr,
@@ -285,7 +287,7 @@ void * db_update_thread(void * pParms) {
 
                 pxtSleep(milliseconds, 100);
 
-                lgLogDebug(lgGetHandle(), "Updating summary");
+                lgLogDebug(lgGetHandle(), "Inserting daily summary");
 
                 sprintf(
                     szInsertStr,

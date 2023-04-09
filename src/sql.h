@@ -18,7 +18,7 @@ typedef struct {
     float           max_lux;
     
     float           total_rainfall;
-    bool            isHourAccounted[24];
+    uint32_t        isHourAccountedBitmap;
     
     float           max_wind_speed;
     float           max_wind_gust;
