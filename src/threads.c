@@ -232,6 +232,8 @@ void * db_update_thread(void * pParms) {
         if (qGetItem(&dbq, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
+            lgLogDebug(lgGetHandle(), "Updating summary structure");
+
             updateSummary(&ds, tr);
 
             hour = tmGetHour();
@@ -253,6 +255,8 @@ void * db_update_thread(void * pParms) {
             dbExecute(wctlConnection, szInsertStr);
 
             pxtSleep(milliseconds, 100);
+
+            lgLogDebug(lgGetHandle(), "Updating telemetry");
 
             sprintf(
                 szInsertStr,
@@ -276,6 +280,10 @@ void * db_update_thread(void * pParms) {
                 ** to just leave the date part...
                 */
                 timestamp[10] = 0;
+
+                pxtSleep(milliseconds, 100);
+
+                lgLogDebug(lgGetHandle(), "Updating summary");
 
                 sprintf(
                     szInsertStr,
