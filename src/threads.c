@@ -193,6 +193,8 @@ void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
     */
     hour = tmGetHour();
 
+    lgLogDebug(lgGetHandle(), "Adding rainfall for hour %d", hour);
+    
     if (!ds->isHourAccounted[hour]) {
         ds->total_rainfall += tr->rainfall;
 
