@@ -20,6 +20,8 @@
 #include "utils.h"
 #include "threads.h"
 
+#include "sql.h"
+
 static que_handle_t            dbq;
 static pxt_handle_t            nrfListenThread;
 static pxt_handle_t            dbUpdateThread;
@@ -152,16 +154,63 @@ void * NRF_listen_thread(void * pParms) {
     return NULL;
 }
 
+void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
+    int         hour;
+
+    if (tr->temperature > ds->max_temperature) {
+        ds->max_temperature = tr->temperature;
+    }
+    if (tr->temperature < ds->min_temperature || (ds->min_temperature == 0.00 && tr->temperature > 0.00)) {
+        ds->min_temperature = tr->temperature;
+    }
+
+    if (tr->pressure > ds->max_pressure) {
+        ds->max_pressure = tr->pressure;
+    }
+    if (tr->pressure < ds->min_pressure || (ds->min_pressure == 0.00 && tr->pressure > 0.00)) {
+        ds->min_pressure = tr->pressure;
+    }
+
+    if (tr->humidity > ds->max_humidity) {
+        ds->max_humidity = tr->humidity;
+    }
+    if (tr->humidity < ds->min_humidity || (ds->min_humidity == 0.00 && tr->humidity > 0.00)) {
+        ds->min_humidity = tr->humidity;
+    }
+
+    if (tr->lux > ds->max_lux) {
+        ds->max_lux = tr->lux;
+    }
+
+    if (tr->windspeed > ds->max_wind_speed) {
+        ds->max_wind_speed = tr->windspeed;
+    }
+
+    /*
+    ** When calculating the total rainfall for the day,
+    ** we only want to count the rainfall reading (mm/h)
+    ** once per hour...
+    */
+    hour = tmGetHour();
+
+    if (!ds->isHourAccounted[hour]) {
+        ds->total_rainfall += tr->rainfall;
+
+        ds->isHourAccounted[hour] = true;
+    }
+}
+
 void * db_update_thread(void * pParms) {
     PGconn *                wctlConnection;
     que_item_t              item;
     weather_transform_t *   tr;
+    daily_summary_t         ds;
+    bool                    isSummaryDone = false;
+    int                     hour;
     char                    szInsertStr[512];
     char *                  timestamp;
-    const char *            pszWeatherInsertStmt = 
-                                "INSERT INTO weather_data (created, temperature, pressure, humidity, lux, rainfall, wind_speed, wind_direction) values ('%s', %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, 'NW');";
-    const char *            pszTelemetryInsertStmt = 
-                                "INSERT INTO telemetry_data (created, battery_voltage, battery_temperature, cpu_temperature) values ('%s', %.2f, %.2f, %.2f);";
+
+    memset(&ds, 0, sizeof(daily_summary_t));
 
     wctlConnection = dbConnect(
             cfgGetValue(cfgGetHandle(), "db.host"), 
@@ -183,6 +232,9 @@ void * db_update_thread(void * pParms) {
         if (qGetItem(&dbq, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
+            updateSummary(&ds, tr);
+
+            hour = tmGetHour();
             timestamp = tmGetSimpleTimeStamp();
 
             sprintf(
@@ -212,6 +264,47 @@ void * db_update_thread(void * pParms) {
             );
 
             dbExecute(wctlConnection, szInsertStr);
+
+            /*
+            ** On the stroke of midnight, write the daily_summary
+            ** and reset the summary values...
+            */
+            if (hour == 0 && !isSummaryDone) {
+                /*
+                ** We only want the date in the format
+                ** "YYYY-MM-DD" so truncate the timestamp
+                ** to just leave the date part...
+                */
+                timestamp[10] = 0;
+
+                sprintf(
+                    szInsertStr,
+                    pszSummaryInsertStmt,
+                    timestamp,
+                    ds.min_temperature,
+                    ds.max_temperature,
+                    ds.min_pressure,
+                    ds.max_pressure,
+                    ds.min_humidity,
+                    ds.max_humidity,
+                    ds.max_lux,
+                    ds.total_rainfall,
+                    ds.max_wind_speed,
+                    ds.max_wind_gust
+                );
+
+                dbExecute(wctlConnection, szInsertStr);
+
+                memset(&ds, 0, sizeof(daily_summary_t));
+
+                isSummaryDone = true;
+            }
+            else if (hour == 1) {
+                /*
+                ** Once we've got to 1am, reset isSummaryDone flag...
+                */
+                isSummaryDone = false;
+            }
 
             pxtSleep(milliseconds, 250);
         }
