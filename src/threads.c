@@ -22,6 +22,21 @@
 
 #include "sql.h"
 
+/*
+** Wind speed in kph:
+**
+** anemometer diameter (m) * pi * anemometer_factor (1.18) * 3600 / 1000
+** = 0.18 * pi * 1.18 * 3600 / 1000
+*/
+#define ANEMOMETER_KPH              2.40218741f
+
+/*
+** Each tip of the bucket in the rain gauge equates
+** to 0.2794mm of rainfall, so just multiply this
+** by the pulse count to get mm/hr...
+*/
+#define RAIN_GAUGE_MM               0.2794f
+
 static que_handle_t            dbq;
 static pxt_handle_t            nrfListenThread;
 static pxt_handle_t            dbUpdateThread;
@@ -61,6 +76,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                             100.0f);
 
     target->lux = computeLux(source->rawLux, true);
+
+    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_KPH;
+    target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 }
 
 void startThreads(void) {
@@ -140,6 +158,8 @@ void * NRF_listen_thread(void * pParms) {
                 lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                 lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
                 lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
+                lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
             }
             else {
                 lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);

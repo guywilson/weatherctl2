@@ -27,8 +27,8 @@ CREATE TABLE daily_summary (
     max_pressure NUMERIC(6,2),
     min_humidity NUMERIC(5,2),
     max_humidity NUMERIC(5,2),
-    min_lux NUMERIC(8,2),
     max_lux NUMERIC(8,2),
     total_rainfall NUMERIC(7,2),
-    max_wind_speed NUMERIC(5,2)
+    max_wind_speed NUMERIC(5,2),
+    max_wind_gust NUMERIC(5,2)
 );
