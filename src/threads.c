@@ -22,6 +22,18 @@
 
 #include "sql.h"
 
+const char *    dir_ordinal[16] = {
+                    "ESE", "ENE", "E", "SSE", 
+                    "SE", "SSW", "S", "NNE", 
+                    "NE", "WSW", "SW", "NNW", 
+                    "N", "NWN", "NW", "W"};
+
+const uint16_t  dir_adc_min[16] = {
+                    450, 593, 686, 832, 
+                    1126, 1473, 1749, 2123, 
+                    2496, 2838, 3120, 3269, 
+                    3479, 3635, 3752, 3881};
+
 /*
 ** Wind speed in mph:
 **
@@ -42,6 +54,8 @@ static pxt_handle_t            nrfListenThread;
 static pxt_handle_t            dbUpdateThread;
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
+    int         i;
+
     const float conversionFactor = 0.000806f;
 
     lgLogDebug(lgGetHandle(), "Raw battery volts ADC: %u", (uint32_t)source->rawBatteryVolts);
@@ -79,6 +93,16 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
+
+    /*
+    ** Find wind direction...
+    */
+    for (i = 0;i < 16;i++) {
+        if (source->rawWindDir >= dir_adc_min[i]) {
+            target->windDirection = dir_ordinal[i];
+            break;
+        }
+    }
 }
 
 void startThreads(void) {
