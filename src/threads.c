@@ -23,12 +23,12 @@
 #include "sql.h"
 
 /*
-** Wind speed in kph:
+** Wind speed in mph:
 **
-** anemometer diameter (m) * pi * anemometer_factor (1.18) * 3600 / 1000
-** = 0.18 * pi * 1.18 * 3600 / 1000
+** anemometer diameter (m) * pi * anemometer_factor (1.18) * 3600 / 1609.34
+** = 0.18 * pi * 1.18 * 3600 / 1609.34
 */
-#define ANEMOMETER_KPH              2.40218741f
+#define ANEMOMETER_MPH              1.49265376f
 
 /*
 ** Each tip of the bucket in the rain gauge equates
@@ -77,7 +77,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->lux = computeLux(source->rawLux, true);
 
-    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_KPH;
+    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 }
 
