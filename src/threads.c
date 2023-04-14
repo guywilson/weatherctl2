@@ -91,6 +91,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->lux = computeLux(source->rawLux, true);
 
+    lgLogDebug(lgGetHandle(), "Raw windspeed: %u", (uint32_t)source->rawWindspeed);
+    lgLogDebug(lgGetHandle(), "Raw rainfall: %u", (uint32_t)source->rawRainfall);
+
     target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
