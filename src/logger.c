@@ -67,6 +67,7 @@ static int _logLevel_atoi(const char * pszLoggingLevel) {
 
 int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const char * fmt, va_list args) {
     int         bytesWritten = 0;
+    char        szTimestamp[TIMESTAMP_STR_LEN];
 
 	pthread_mutex_lock(&_mutex);
 
@@ -76,33 +77,35 @@ int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const char * fmt
             return -1;
         }
 
+        tmGetTimeStamp(szTimestamp, TIMESTAMP_STR_LEN, true);
+
+        strncpy(_logBuffer, "[", 2);
+        strncat(_logBuffer, szTimestamp, TIMESTAMP_STR_LEN);
+        strncat(_logBuffer, "] ", 3);
+
+        switch (logLevel) {
+            case LOG_LEVEL_DEBUG:
+                strncat(_logBuffer, "[DBG]", 6);
+                break;
+
+            case LOG_LEVEL_STATUS:
+                strncat(_logBuffer, "[STA]", 6);
+                break;
+
+            case LOG_LEVEL_INFO:
+                strncat(_logBuffer, "[INF]", 6);
+                break;
+
+            case LOG_LEVEL_ERROR:
+                strncat(_logBuffer, "[ERR]", 6);
+                break;
+
+            case LOG_LEVEL_FATAL:
+                strncat(_logBuffer, "[FTL]", 6);
+                break;
+        }
+
         if (addCR) {
-            strncpy(_logBuffer, "[", 2);
-            strncat(_logBuffer, tmGetTimeStamp(true), TIMESTAMP_STR_LEN);
-            strncat(_logBuffer, "] ", 3);
-
-            switch (logLevel) {
-                case LOG_LEVEL_DEBUG:
-                    strncat(_logBuffer, "[DBG]", 6);
-                    break;
-
-                case LOG_LEVEL_STATUS:
-                    strncat(_logBuffer, "[STA]", 6);
-                    break;
-
-                case LOG_LEVEL_INFO:
-                    strncat(_logBuffer, "[INF]", 6);
-                    break;
-
-                case LOG_LEVEL_ERROR:
-                    strncat(_logBuffer, "[ERR]", 6);
-                    break;
-
-                case LOG_LEVEL_FATAL:
-                    strncat(_logBuffer, "[FTL]", 6);
-                    break;
-            }
-
             strncat(_logBuffer, fmt, (LOG_BUFFER_LENGTH >> 1));
             strncat(_logBuffer, "\n", 2);
         }

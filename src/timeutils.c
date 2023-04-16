@@ -79,15 +79,13 @@ char * tmGetUptime(void) {
 	return _getUptime(seconds);
 }
 
-char * tmGetTimeStamp(bool includeMicroseconds) {
-    static char			szTimeStr[TIMESTAMP_STR_LEN];
-
+char * tmGetTimeStamp(char * pszBuffer, size_t bufferLen, bool includeMicroseconds) {
 	_updateTime();
 
 	if (includeMicroseconds) {
 		snprintf(
-			szTimeStr,
-            28,
+			pszBuffer,
+            bufferLen,
 			"%d-%02d-%02d %02d:%02d:%02d.%06d",
 			tmGetYear(),
 			tmGetMonth(),
@@ -99,8 +97,8 @@ char * tmGetTimeStamp(bool includeMicroseconds) {
 	}
 	else {
 		snprintf(
-			szTimeStr,
-            20,
+			pszBuffer,
+            bufferLen,
 			"%d-%02d-%02d %02d:%02d:%02d",
 			tmGetYear(),
 			tmGetMonth(),
@@ -110,11 +108,11 @@ char * tmGetTimeStamp(bool includeMicroseconds) {
 			tmGetSecond());
 	}
 
-	return szTimeStr;
+	return pszBuffer;
 }
 
-char * tmGetSimpleTimeStamp(void) {
-	return tmGetTimeStamp(false);
+char * tmGetSimpleTimeStamp(char * pszBuffer, size_t bufferLen) {
+	return tmGetTimeStamp(pszBuffer, bufferLen, false);
 }
 
 int tmGetYear(void) {

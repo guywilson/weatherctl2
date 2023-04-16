@@ -263,7 +263,7 @@ void * db_update_thread(void * pParms) {
     bool                    isSummaryDone = false;
     int                     hour;
     char                    szInsertStr[512];
-    char *                  timestamp;
+    char                    timestamp[TIMESTAMP_STR_LEN];
 
     memset(&ds, 0, sizeof(daily_summary_t));
 
@@ -292,7 +292,7 @@ void * db_update_thread(void * pParms) {
             updateSummary(&ds, tr);
 
             hour = tmGetHour();
-            timestamp = tmGetSimpleTimeStamp();
+            tmGetSimpleTimeStamp(timestamp, TIMESTAMP_STR_LEN);
 
             lgLogDebug(lgGetHandle(), "Inserting weather data");
 

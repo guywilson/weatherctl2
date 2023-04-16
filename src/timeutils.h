@@ -1,7 +1,7 @@
 #ifndef __INCL_TIMEUTILS
 #define __INCL_TIMEUTILS
 
-#define TIMESTAMP_STR_LEN               32
+#define TIMESTAMP_STR_LEN               28
 #define SECONDS_PER_MINUTE				60
 #define SECONDS_PER_HOUR				(SECONDS_PER_MINUTE * 60)
 #define SECONDS_PER_DAY					(SECONDS_PER_HOUR * 24)
@@ -16,8 +16,8 @@
 
 void    tmInitialiseUptimeClock(void);
 char *  tmGetUptime(void);
-char *  tmGetTimeStamp(bool includeMicroseconds);
-char *  tmGetSimpleTimeStamp(void);
+char *  tmGetTimeStamp(char * pszBuffer, size_t bufferLen, bool includeMicroseconds);
+char *  tmGetSimpleTimeStamp(char * pszBuffer, size_t bufferLen);
 int     tmGetYear(void);
 int     tmGetMonth(void);
 int     tmGetDay(void);
