@@ -37,10 +37,16 @@ const uint16_t  dir_adc_min[16] = {
 /*
 ** Wind speed in mph:
 **
-** anemometer diameter (m) * pi * anemometer_factor (1.18) * 3600 / 1609.34
-** = 0.18 * pi * 1.18 * 3600 / 1609.34
+** = anemometer diameter (m) * 
+**   pi * 
+**   anemometer_factor (1.18) * 
+**   3600 (secs per hour) / 
+**   (1609.34 (m per mile) * 
+**   2 (pulses per revolution))
+**
+** = 0.18 * pi * 1.18 * 3600 / (1609.34 * 2)
 */
-#define ANEMOMETER_MPH              1.49265376f
+#define ANEMOMETER_MPH              0.74632688f
 
 /*
 ** Each tip of the bucket in the rain gauge equates

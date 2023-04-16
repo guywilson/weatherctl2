@@ -459,7 +459,7 @@ void NRF_init(nrf_p nrf) {
     NRF_write_register(nrf, NRF_SETUP_RETR, txBuf, 1);
 
     txBuf[0] = 
-        NRF24L01_RF_SETUP_RF_POWER_MEDIUM | 
+        NRF24L01_RF_SETUP_RF_POWER_LOW | 
         NRF24L01_RF_SETUP_RF_LNA_GAIN_ON | 
         nrf->data_rate;
 
