@@ -135,6 +135,7 @@ void * NRF_listen_thread(void * pParms) {
     int                 rtn;
     uint32_t            stationID;
     char                rxBuffer[64];
+    char                packetType;
     weather_packet_t    pkt;
     weather_transform_t tr;
     que_item_t          qItem;
@@ -173,29 +174,39 @@ void * NRF_listen_thread(void * pParms) {
 
             hexDump(rxBuffer, NRF_MAX_PAYLOAD);
 
-            memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
+            packetType = rxBuffer[0];
 
-            if (pkt.chipID == stationID) {
-                _transformWeatherPacket(&tr, &pkt);
+            switch (packetType) {
+                case 'W':
+                    memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
-                qItem.item = &tr;
-                qItem.itemLength = sizeof(weather_transform_t);
+                    if (pkt.chipID == stationID) {
+                        _transformWeatherPacket(&tr, &pkt);
 
-                qPutItem(&dbq, qItem);
+                        qItem.item = &tr;
+                        qItem.itemLength = sizeof(weather_transform_t);
 
-                lgLogDebug(lgGetHandle(), "Got weather data:");
-                lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
-                lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                lgLogDebug(lgGetHandle(), "\tRP2040 temp: %.2f", tr.chipTemperature);
-                lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
-                lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
-                lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
-                lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
-                lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
-                lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
-            }
-            else {
-                lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
+                        qPutItem(&dbq, qItem);
+
+                        lgLogDebug(lgGetHandle(), "Got weather data:");
+                        lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
+                        lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
+                        lgLogDebug(lgGetHandle(), "\tRP2040 temp: %.2f", tr.chipTemperature);
+                        lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
+                        lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
+                        lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
+                        lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                        lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
+                        lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
+                    }
+                    else {
+                        lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
+                    }
+                    break;
+
+                default:
+                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%02X]('%c')", packetType, packetType);
+                    break;
             }
 
             pxtSleep(milliseconds, 250);
