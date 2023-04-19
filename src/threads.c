@@ -355,8 +355,7 @@ void * db_update_thread(void * pParms) {
                 pszTelemetryInsertStmt,
                 timestamp,
                 tr->batteryVoltage,
-                tr->batteryTemperature,
-                0.0f
+                tr->batteryTemperature
             );
 
             dbExecute(wctlConnection, szInsertStr);

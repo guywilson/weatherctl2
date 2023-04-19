@@ -14,8 +14,7 @@ CREATE TABLE telemetry_data (
     id SERIAL PRIMARY KEY,
     created TIMESTAMP NOT NULL,
     battery_voltage NUMERIC(3,2),
-    battery_temperature NUMERIC(5,2),
-    cpu_temperature NUMERIC(5,2)
+    battery_temperature NUMERIC(5,2)
 );
 
 CREATE TABLE daily_summary (
