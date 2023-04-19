@@ -356,7 +356,7 @@ void * db_update_thread(void * pParms) {
                 timestamp,
                 tr->batteryVoltage,
                 tr->batteryTemperature,
-                tr->chipTemperature
+                0.0f
             );
 
             dbExecute(wctlConnection, szInsertStr);
