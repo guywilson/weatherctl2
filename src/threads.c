@@ -22,6 +22,16 @@
 
 #include "sql.h"
 
+#define PACKET_TYPE_WEATHER                 0x0100
+#define PACKET_TYPE_SLEEP                   0x0200
+#define PACKET_TYPE_PANIC                   0x0F00
+
+#define PACKET_TYPE_UNKNOWN                 0x0000
+
+const char * packetIDWeather    = "WP";
+const char * packetIDSleep      = "SL";
+const char * packetIDPanic      = "PN";
+
 const char *    dir_ordinal[16] = {
                     "ESE", "ENE", "E", "SSE", 
                     "SE", "SSW", "S", "NNE", 
@@ -59,18 +69,33 @@ static que_handle_t            dbq;
 static pxt_handle_t            nrfListenThread;
 static pxt_handle_t            dbUpdateThread;
 
+static uint16_t _getPacketType(char * packet) {
+    uint16_t            packetType;
+
+    if (packet[0] == packetIDWeather[0] && packet[1] == packetIDWeather[1]) {
+        packetType = PACKET_TYPE_WEATHER;
+    }
+    else if (packet[0] == packetIDSleep[0] && packet[1] == packetIDSleep[1]) {
+        packetType = PACKET_TYPE_SLEEP;
+    }
+    else if (packet[0] == packetIDPanic[0] && packet[1] == packetIDPanic[1]) {
+        packetType = PACKET_TYPE_PANIC;
+    }
+    else {
+        packetType = PACKET_TYPE_UNKNOWN;
+    }
+
+    return packetType;
+}
+
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     int         i;
 
-    const float conversionFactor = 0.000806f;
-
     lgLogDebug(lgGetHandle(), "Raw battery volts ADC: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug(lgGetHandle(), "Raw battery temp ADC: %u", (uint32_t)source->rawBatteryTemperature);
-    lgLogDebug(lgGetHandle(), "Raw chip temp ADC: %u", (uint32_t)source->rawChipTemperature);
 
     target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3 * 3.3;
     target->batteryTemperature = (float)source->rawBatteryTemperature;
-    target->chipTemperature = 27.0f - (((float)source->rawChipTemperature * conversionFactor) - 0.706f) / 0.001721f;
 
     /*
     ** TMP117 temperature
@@ -135,7 +160,7 @@ void * NRF_listen_thread(void * pParms) {
     int                 rtn;
     uint32_t            stationID;
     char                rxBuffer[64];
-    char                packetType;
+    uint16_t            packetType;
     weather_packet_t    pkt;
     weather_transform_t tr;
     que_item_t          qItem;
@@ -174,10 +199,10 @@ void * NRF_listen_thread(void * pParms) {
 
             hexDump(rxBuffer, NRF_MAX_PAYLOAD);
 
-            packetType = rxBuffer[0];
+            packetType = _getPacketType(rxBuffer);
 
             switch (packetType) {
-                case 'W':
+                case PACKET_TYPE_WEATHER:
                     memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
                     if (pkt.chipID == stationID) {
@@ -191,7 +216,6 @@ void * NRF_listen_thread(void * pParms) {
                         lgLogDebug(lgGetHandle(), "Got weather data:");
                         lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
                         lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                        lgLogDebug(lgGetHandle(), "\tRP2040 temp: %.2f", tr.chipTemperature);
                         lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                         lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                         lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
@@ -205,7 +229,7 @@ void * NRF_listen_thread(void * pParms) {
                     break;
 
                 default:
-                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%02X]('%c')", packetType, packetType);
+                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%04X]('%c%c')", packetType, rxBuffer[0], rxBuffer[1]);
                     break;
             }
 
