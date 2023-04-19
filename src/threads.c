@@ -297,6 +297,7 @@ void * db_update_thread(void * pParms) {
     daily_summary_t         ds;
     bool                    isSummaryDone = false;
     int                     hour;
+    int                     minute;
     char                    szInsertStr[512];
     char                    timestamp[TIMESTAMP_STR_LEN];
 
@@ -327,6 +328,7 @@ void * db_update_thread(void * pParms) {
             updateSummary(&ds, tr);
 
             hour = tmGetHour();
+            minute = tmGetMinute();
             tmGetSimpleTimeStamp(timestamp, TIMESTAMP_STR_LEN);
 
             lgLogDebug(lgGetHandle(), "Inserting weather data");
@@ -364,7 +366,7 @@ void * db_update_thread(void * pParms) {
             ** On the stroke of midnight, write the daily_summary
             ** and reset the summary values...
             */
-            if (hour == 0 && !isSummaryDone) {
+            if (hour == 23 && minute == 59 && !isSummaryDone) {
                 /*
                 ** We only want the date in the format
                 ** "YYYY-MM-DD" so truncate the timestamp
