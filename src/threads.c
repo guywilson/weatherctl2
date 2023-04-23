@@ -24,12 +24,14 @@
 
 #define PACKET_TYPE_WEATHER                 0x0100
 #define PACKET_TYPE_SLEEP                   0x0200
+#define PACKET_TYPE_WATCHDOG                0x0300
 #define PACKET_TYPE_PANIC                   0x0F00
 
 #define PACKET_TYPE_UNKNOWN                 0x0000
 
 const char * packetIDWeather    = "WP";
-const char * packetIDSleep      = "SL";
+const char * packetIDSleep      = "SP";
+const char * packetIDWatchdog   = "WD";
 const char * packetIDPanic      = "PN";
 
 const char *    dir_ordinal[16] = {
@@ -77,6 +79,9 @@ static uint16_t _getPacketType(char * packet) {
     }
     else if (packet[0] == packetIDSleep[0] && packet[1] == packetIDSleep[1]) {
         packetType = PACKET_TYPE_SLEEP;
+    }
+    else if (packet[0] == packetIDWatchdog[0] && packet[1] == packetIDWatchdog[1]) {
+        packetType = PACKET_TYPE_WATCHDOG;
     }
     else if (packet[0] == packetIDPanic[0] && packet[1] == packetIDPanic[1]) {
         packetType = PACKET_TYPE_PANIC;
@@ -162,6 +167,8 @@ void * NRF_listen_thread(void * pParms) {
     char                rxBuffer[64];
     uint16_t            packetType;
     weather_packet_t    pkt;
+    sleep_packet_t      sleepPkt;
+    watchdog_packet_t   wdPkt;
     weather_transform_t tr;
     que_item_t          qItem;
 
@@ -224,7 +231,39 @@ void * NRF_listen_thread(void * pParms) {
                         lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
                     }
                     else {
-                        lgLogDebug(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
+                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
+                    }
+                    break;
+
+                case PACKET_TYPE_SLEEP:
+                    memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
+
+                    if (sleepPkt.chipID == stationID) {
+                        pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
+                        pkt.rawBatteryTemperature = sleepPkt.rawBatteryTemperature;
+                        pkt.rawLux = sleepPkt.rawLux;
+
+                        _transformWeatherPacket(&tr, &pkt);
+
+                        lgLogStatus(lgGetHandle(), "Got sleep packet:");
+                        lgLogStatus(lgGetHandle(), "\tChipID:      0x%08X", sleepPkt.chipID);
+                        lgLogStatus(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
+                        lgLogStatus(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                        lgLogStatus(lgGetHandle(), "\tSleep for:   %d", (int)sleepPkt.sleepHours);
+                    }
+                    else {
+                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", sleepPkt.chipID);
+                    }
+                    break;
+
+                case PACKET_TYPE_WATCHDOG:
+                    memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
+
+                    if (wdPkt.chipID == stationID) {
+                        lgLogStatus(lgGetHandle(), "Got watchdog packet");
+                    }
+                    else {
+                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", wdPkt.chipID);
                     }
                     break;
 

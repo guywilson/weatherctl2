@@ -38,6 +38,14 @@ typedef struct {                                    // O/S  - Description
     uint16_t            rawLux;                     // 0x0C - The last raw light level
 }
 sleep_packet_t;
+
+typedef struct {                                    // O/S  - Description
+                                                    // ----   ---------------------------------
+    char                packetID[2];                // 0x00 - Identify this as a sleep packet
+
+    uint32_t            chipID;                     // 0x02 - ID of the RP2040
+}
+watchdog_packet_t;
 #pragma pack(pop)
 
 typedef struct {
