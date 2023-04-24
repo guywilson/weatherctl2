@@ -459,25 +459,25 @@ void NRF_init(nrf_p nrf) {
     NRF_write_register(nrf, NRF_SETUP_RETR, txBuf, 1);
 
     txBuf[0] = 
-        NRF24L01_RF_SETUP_RF_POWER_LOW | 
+        NRF24L01_RF_SETUP_RF_POWER_HIGH | 
         NRF24L01_RF_SETUP_RF_LNA_GAIN_ON | 
         nrf->data_rate;
 
     NRF_write_register(nrf, NRF24L01_REG_RF_SETUP, txBuf, 1);
 
-    txBuf[0] = 0x00;
+    txBuf[0] = 0x03;
 
     NRF_write_register(nrf, NRF24L01_REG_EN_AA, txBuf, 1);
 
-    // txBuf[0] = 
-    //     NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN | 
-    //     NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK;
+    txBuf[0] = 
+        NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN | 
+        NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK;
 
-    // NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
+    NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
 
-    // txBuf[0] = 0x01;
+    txBuf[0] = 0x03;
 
-    // NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
+    NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
 
     NRF_flush_rx(nrf);
     NRF_flush_tx(nrf);
