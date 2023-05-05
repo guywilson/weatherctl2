@@ -454,7 +454,7 @@ void NRF_init(nrf_p nrf) {
 
     NRF_power_down(nrf);
 
-    txBuf[0] = 0x2A;
+    txBuf[0] = 0x00;
 
     NRF_write_register(nrf, NRF_SETUP_RETR, txBuf, 1);
 
@@ -465,7 +465,7 @@ void NRF_init(nrf_p nrf) {
 
     NRF_write_register(nrf, NRF24L01_REG_RF_SETUP, txBuf, 1);
 
-    txBuf[0] = 0x03;
+    txBuf[0] = 0x00;
 
     NRF_write_register(nrf, NRF24L01_REG_EN_AA, txBuf, 1);
 
@@ -475,9 +475,9 @@ void NRF_init(nrf_p nrf) {
 
     NRF_write_register(nrf, NRF24L01_REG_FEATURE, txBuf, 1);
 
-    txBuf[0] = 0x03;
+    // txBuf[0] = 0x03;
 
-    NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
+    // NRF_write_register(nrf, NRF24L01_REG_DYNPD, txBuf, 1);
 
     NRF_flush_rx(nrf);
     NRF_flush_tx(nrf);
