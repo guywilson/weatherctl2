@@ -102,6 +102,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3 * 3.3;
     target->batteryTemperature = (float)source->rawBatteryTemperature;
 
+    lgLogDebug(lgGetHandle(), "Raw temperature: %d", (int)source->rawTemperature);
+
     /*
     ** TMP117 temperature
     */
