@@ -121,6 +121,11 @@
 #define   NRF_EN_ACK_PAY  1 << 1
 #define   NRF_EN_DYN_ACK  1 << 0
 
+#define NRF_SPI_DEVICE                  0
+#define NRF_SPI_CHANNEL                 0
+#define NRF_SPI_FREQUENCY               4000000
+#define NRF_SPI_CE_PIN                  25
+
 typedef struct {
    int sbc;           // sbc connection
    int CE;            // GPIO for chip enable

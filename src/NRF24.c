@@ -516,10 +516,10 @@ void setupNRF24L01(void) {
                 NRF24L01_RF_SETUP_DATA_RATE_2MBPS : 
                 NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
 
-	nrf.CE 				= cfgGetValueAsInteger(cfgGetHandle(), "spi.cepin");
-	nrf.spi_device 		= cfgGetValueAsInteger(cfgGetHandle(), "spi.device");
-	nrf.spi_channel 	= cfgGetValueAsInteger(cfgGetHandle(), "spi.channel");
-	nrf.spi_speed 		= cfgGetValueAsInteger(cfgGetHandle(), "spi.freq");
+	nrf.CE 				= NRF_SPI_CE_PIN;
+	nrf.spi_device 		= NRF_SPI_DEVICE;
+	nrf.spi_channel 	= NRF_SPI_CHANNEL;
+	nrf.spi_speed 		= NRF_SPI_FREQUENCY;
 	nrf.mode 			= NRF_RX;
 	nrf.channel 		= cfgGetValueAsInteger(cfgGetHandle(), "radio.channel");
 	nrf.payload 		= NRF_MAX_PAYLOAD;
