@@ -96,11 +96,17 @@ static uint16_t _getPacketType(char * packet) {
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     int         i;
 
-    lgLogDebug(lgGetHandle(), "Raw battery volts ADC: %u", (uint32_t)source->rawBatteryVolts);
-    lgLogDebug(lgGetHandle(), "Raw battery temp ADC: %u", (uint32_t)source->rawBatteryTemperature);
+    lgLogDebug(lgGetHandle(), "Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
+    lgLogDebug(lgGetHandle(), "Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
+    lgLogDebug(lgGetHandle(), "Raw battery temp: %u", (uint32_t)source->rawBatteryTemperature);
 
-    target->batteryVoltage = ((float)source->rawBatteryVolts / 4096.0) * 3 * 3.3;
-    target->batteryTemperature = (float)source->rawBatteryTemperature;
+    lgLogDebug(lgGetHandle(), "Raw VSYS volts: %u", (uint32_t)source->rawVSYSVoltage);
+
+    target->vsysVoltage = ((float)source->rawVSYSVoltage / 4096.0) * 3 * 3.3;
+
+    target->batteryVoltage = (float)source->rawBatteryVolts * 1000.0;
+    target->batteryPercentage = (float)source->rawBatteryPercentage * 10.0;    
+    target->batteryTemperature = ((float)source->rawBatteryTemperature / 10) - 273.15;
 
     lgLogDebug(lgGetHandle(), "Raw temperature: %d", (int)source->rawTemperature);
 
@@ -224,7 +230,10 @@ void * NRF_listen_thread(void * pParms) {
 
                         lgLogDebug(lgGetHandle(), "Got weather data:");
                         lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
+                        lgLogDebug(lgGetHandle(), "\tVSYS volts:  %.2f", tr.vsysVoltage);
                         lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
+                        lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
+                        lgLogDebug(lgGetHandle(), "\tBat. temp:   %.2f", tr.batteryTemperature);
                         lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                         lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                         lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
