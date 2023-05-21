@@ -104,8 +104,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->vsysVoltage = ((float)source->rawVSYSVoltage / 4096.0) * 3 * 3.3;
 
-    target->batteryVoltage = (float)source->rawBatteryVolts * 1000.0;
-    target->batteryPercentage = (float)source->rawBatteryPercentage * 10.0;    
+    target->batteryVoltage = (float)source->rawBatteryVolts / 1000.0;
+    target->batteryPercentage = (float)source->rawBatteryPercentage / 10.0;    
     target->batteryTemperature = ((float)source->rawBatteryTemperature / 10) - 273.15;
 
     lgLogDebug(lgGetHandle(), "Raw temperature: %d", (int)source->rawTemperature);
