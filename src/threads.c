@@ -67,9 +67,11 @@ const uint16_t  dir_adc_min[16] = {
 */
 #define RAIN_GAUGE_MM               0.2794f
 
-static que_handle_t            dbq;
-static pxt_handle_t            nrfListenThread;
-static pxt_handle_t            dbUpdateThread;
+static que_handle_t             dbq;
+static pxt_handle_t             nrfListenThread;
+static pxt_handle_t             dbUpdateThread;
+
+static char                     szDumpBuffer[1024];
 
 static uint16_t _getPacketType(char * packet) {
     uint16_t            packetType;
@@ -212,7 +214,11 @@ void * NRF_listen_thread(void * pParms) {
         while (NRF_data_ready(nrf)) {
             NRF_get_payload(nrf, rxBuffer);
 
-            hexDump(rxBuffer, NRF_MAX_PAYLOAD);
+            if (lgCheckLogLevel(lgGetHandle(), LOG_LEVEL_DEBUG)) {
+                if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
+                    lgLogDebug(lgGetHandle(), "%s", szDumpBuffer);
+                }
+            }
 
             packetType = _getPacketType(rxBuffer);
 
