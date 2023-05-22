@@ -214,10 +214,8 @@ void * NRF_listen_thread(void * pParms) {
         while (NRF_data_ready(nrf)) {
             NRF_get_payload(nrf, rxBuffer);
 
-            if (lgCheckLogLevel(lgGetHandle(), LOG_LEVEL_DEBUG)) {
-                if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
-                    lgLogDebug(lgGetHandle(), "%s", szDumpBuffer);
-                }
+            if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
+                lgLogDebug(lgGetHandle(), "%s", szDumpBuffer);
             }
 
             packetType = _getPacketType(rxBuffer);
