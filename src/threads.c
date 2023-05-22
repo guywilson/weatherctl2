@@ -411,6 +411,7 @@ void * db_update_thread(void * pParms) {
                 pszTelemetryInsertStmt,
                 timestamp,
                 tr->batteryVoltage,
+                tr->batteryPercentage,
                 tr->batteryTemperature
             );
 

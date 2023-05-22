@@ -50,9 +50,11 @@ const char * pszTelemetryInsertStmt =
 "INSERT INTO telemetry_data (\
 created, \
 battery_voltage, \
+battery_percentage, \
 battery_temperature) \
 values (\
 '%s', \
+%.2f, \
 %.2f, \
 %.2f);";
 
