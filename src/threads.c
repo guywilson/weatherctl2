@@ -16,23 +16,12 @@
 #include "psql.h"
 #include "que.h"
 #include "icp10125.h"
-#include "veml7700.h"
+#include "ltr390.h"
 #include "utils.h"
+#include "packet.h"
 #include "threads.h"
 
 #include "sql.h"
-
-#define PACKET_TYPE_WEATHER                 0x0100
-#define PACKET_TYPE_SLEEP                   0x0200
-#define PACKET_TYPE_WATCHDOG                0x0300
-#define PACKET_TYPE_PANIC                   0x0F00
-
-#define PACKET_TYPE_UNKNOWN                 0x0000
-
-const char * packetIDWeather    = "WP";
-const char * packetIDSleep      = "SP";
-const char * packetIDWatchdog   = "WD";
-const char * packetIDPanic      = "PN";
 
 const char *    dir_ordinal[16] = {
                     "ESE", "ENE", "E", "SSE", 
@@ -73,26 +62,16 @@ static pxt_handle_t             dbUpdateThread;
 
 static char                     szDumpBuffer[1024];
 
-static uint16_t _getPacketType(char * packet) {
-    uint16_t            packetType;
+static uint8_t _getPacketType(char * packet) {
+    return (uint8_t)packet[0];
+}
 
-    if (packet[0] == packetIDWeather[0] && packet[1] == packetIDWeather[1]) {
-        packetType = PACKET_TYPE_WEATHER;
-    }
-    else if (packet[0] == packetIDSleep[0] && packet[1] == packetIDSleep[1]) {
-        packetType = PACKET_TYPE_SLEEP;
-    }
-    else if (packet[0] == packetIDWatchdog[0] && packet[1] == packetIDWatchdog[1]) {
-        packetType = PACKET_TYPE_WATCHDOG;
-    }
-    else if (packet[0] == packetIDPanic[0] && packet[1] == packetIDPanic[1]) {
-        packetType = PACKET_TYPE_PANIC;
-    }
-    else {
-        packetType = PACKET_TYPE_UNKNOWN;
-    }
+static uint16_t _getExpectedChipID(void) {
+    uint16_t            chipID;
 
-    return packetType;
+    chipID = ((cfgGetValueAsLongUnsigned(cfgGetHandle(), "radio.stationid") >> 12) & 0xFFFF);
+
+    return chipID;
 }
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
@@ -135,7 +114,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                             source->rawICPPressure) / 
                             100.0f);
 
-    target->lux = computeLux(source->rawLux, true);
+    target->lux = computeLux(source->rawALS_UV);
+    target->uvIndex = computeUVI(source->rawALS_UV);
 
     lgLogDebug(lgGetHandle(), "Raw windspeed: %u", (uint32_t)source->rawWindspeed);
     lgLogDebug(lgGetHandle(), "Raw rainfall: %u", (uint32_t)source->rawRainfall);
@@ -173,9 +153,9 @@ void stopThreads(void) {
 
 void * NRF_listen_thread(void * pParms) {
     int                 rtn;
-    uint32_t            stationID;
+    uint16_t            stationID;
     char                rxBuffer[64];
-    uint16_t            packetType;
+    uint8_t             packetID;
     weather_packet_t    pkt;
     sleep_packet_t      sleepPkt;
     watchdog_packet_t   wdPkt;
@@ -206,7 +186,7 @@ void * NRF_listen_thread(void * pParms) {
         return NULL;
     }
 
-    stationID = cfgGetValueAsLongUnsigned(cfgGetHandle(), "radio.stationid");
+    stationID = _getExpectedChipID();
 
     lgLogInfo(lgGetHandle(), "Read station ID from config as: 0x%08X", stationID);
 
@@ -218,10 +198,10 @@ void * NRF_listen_thread(void * pParms) {
                 lgLogDebug(lgGetHandle(), "%s", szDumpBuffer);
             }
 
-            packetType = _getPacketType(rxBuffer);
+            packetID = _getPacketType(rxBuffer);
 
-            switch (packetType) {
-                case PACKET_TYPE_WEATHER:
+            switch (packetID) {
+                case PACKET_ID_WEATHER:
                     memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
                     if (pkt.chipID == stationID) {
@@ -242,6 +222,7 @@ void * NRF_listen_thread(void * pParms) {
                         lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                         lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
                         lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                        lgLogDebug(lgGetHandle(), "\tUV Index:    %.1f", tr.uvIndex);
                         lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
                         lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
                     }
@@ -250,13 +231,14 @@ void * NRF_listen_thread(void * pParms) {
                     }
                     break;
 
-                case PACKET_TYPE_SLEEP:
+                case PACKET_ID_SLEEP:
                     memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
 
                     if (sleepPkt.chipID == stationID) {
                         pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
                         pkt.rawBatteryTemperature = sleepPkt.rawBatteryTemperature;
-                        pkt.rawLux = sleepPkt.rawLux;
+
+                        memcpy(pkt.rawALS_UV, sleepPkt.rawALS_UV, 5);
 
                         _transformWeatherPacket(&tr, &pkt);
 
@@ -271,7 +253,7 @@ void * NRF_listen_thread(void * pParms) {
                     }
                     break;
 
-                case PACKET_TYPE_WATCHDOG:
+                case PACKET_ID_WATCHDOG:
                     memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
 
                     if (wdPkt.chipID == stationID) {
@@ -283,7 +265,7 @@ void * NRF_listen_thread(void * pParms) {
                     break;
 
                 default:
-                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%04X]('%c%c')", packetType, rxBuffer[0], rxBuffer[1]);
+                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%02X]", packetID);
                     break;
             }
 

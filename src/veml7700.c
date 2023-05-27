@@ -33,7 +33,7 @@ static float getResolution(void) {
         (VEML7700_MAX_GAIN / VEML7700_SELECTED_GAIN));
 }
 
-float computeLux(uint16_t rawALS, bool corrected) {
+float computeLux_veml(uint16_t rawALS, bool corrected) {
     float           lux;
     
     lux = getResolution() * (float)rawALS;
