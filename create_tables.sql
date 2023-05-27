@@ -5,6 +5,7 @@ CREATE TABLE weather_data (
     pressure NUMERIC(6,2),
     humidity NUMERIC(5,2),
     lux NUMERIC(8,2),
+    uv_index NUMERIC(5,2),
     rainfall NUMERIC(7,2),
     wind_speed NUMERIC(5,2),
     wind_direction CHAR(3)

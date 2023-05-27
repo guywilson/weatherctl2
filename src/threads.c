@@ -377,6 +377,7 @@ void * db_update_thread(void * pParms) {
                 tr->pressure,
                 tr->humidity,
                 tr->lux,
+                tr->uvIndex,
                 tr->rainfall,
                 tr->windspeed,
                 tr->windDirection

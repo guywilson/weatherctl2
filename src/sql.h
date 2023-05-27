@@ -33,11 +33,13 @@ temperature, \
 pressure, \
 humidity, \
 lux, \
+uv_index, \
 rainfall, \
 wind_speed, \
 wind_direction) \
 values (\
 '%s', \
+%.2f, \
 %.2f, \
 %.2f, \
 %.2f, \
