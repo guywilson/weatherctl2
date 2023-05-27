@@ -24,6 +24,8 @@ float computeLux(uint8_t * ALS_UV) {
 
     rawALS = (uint32_t)ALS_UV[0] | ((uint32_t)ALS_UV[1] << 8) | (((uint32_t)ALS_UV[2] & 0x000F) << 16);
 
+    lgLogDebug(lgGetHandle(), "Raw ALS: 0x%04X", rawALS);
+
     lux = ((float)rawALS * 0.6) / (18 * 4);
 
     return lux;
@@ -36,7 +38,7 @@ float computeUVI(uint8_t * ALS_UV) {
     rawUVS = (uint32_t)ALS_UV[4] | ((uint32_t)ALS_UV[3] << 8) | (((uint32_t)ALS_UV[2] & 0x00F0) << 16);
 
     lgLogDebug(lgGetHandle(), "Raw UVS: 0x%04X", rawUVS);
-    
+
     // self.uvs
     // / (
     //     (Gain.factor[self.gain] / 18)
