@@ -37,17 +37,8 @@ const uint16_t  dir_adc_min[16] = {
 
 /*
 ** Wind speed in mph:
-**
-** = anemometer diameter (m) * 
-**   pi * 
-**   anemometer_factor (1.18) * 
-**   3600 (secs per hour) / 
-**   (1609.34 (m per mile) * 
-**   2 (pulses per revolution))
-**
-** = 0.18 * pi * 1.18 * 3600 / (1609.34 * 2)
 */
-#define ANEMOMETER_MPH              0.74632688f
+#define ANEMOMETER_MPH              0.0062137119223733f
 
 /*
 ** Each tip of the bucket in the rain gauge equates
@@ -81,9 +72,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     lgLogDebug(lgGetHandle(), "Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
     lgLogDebug(lgGetHandle(), "Raw battery temp: %u", (uint32_t)source->rawBatteryTemperature);
 
-    lgLogDebug(lgGetHandle(), "Raw VSYS volts: %u", (uint32_t)source->rawVSYSVoltage);
-
-    target->vsysVoltage = ((float)source->rawVSYSVoltage / 4096.0) * 3 * 3.3;
+    // target->vsysVoltage = ((float)source->rawVSYSVoltage / 4096.0) * 3 * 3.3;
 
     target->batteryVoltage = (float)source->rawBatteryVolts / 1000.0;
     target->batteryPercentage = (float)source->rawBatteryPercentage / 10.0;    
@@ -121,6 +110,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     lgLogDebug(lgGetHandle(), "Raw rainfall: %u", (uint32_t)source->rawRainfall);
 
     target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH;
+    target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
     /*
