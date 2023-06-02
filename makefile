@@ -36,7 +36,7 @@ STDLIBS = -pthread
 EXTLIBS = -lcrypto -lpq -llgpio -lstrutils
 
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
-LINK.o = $(LINKER) $(STDLIBS) -o $@
+LINK.o = $(LINKER) $(STDLIBS) -o $@ -Xlinker -Map=wctl.map
 
 CSRCFILES = $(wildcard $(SOURCE)/*.c)
 OBJFILES = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(CSRCFILES))
