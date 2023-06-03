@@ -204,7 +204,6 @@ void * NRF_listen_thread(void * pParms) {
 
                         lgLogDebug(lgGetHandle(), "Got weather data:");
                         lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
-                        lgLogDebug(lgGetHandle(), "\tVSYS volts:  %.2f", tr.vsysVoltage);
                         lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
                         lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
                         lgLogDebug(lgGetHandle(), "\tBat. temp:   %.2f", tr.batteryTemperature);
@@ -214,6 +213,7 @@ void * NRF_listen_thread(void * pParms) {
                         lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
                         lgLogDebug(lgGetHandle(), "\tUV Index:    %.1f", tr.uvIndex);
                         lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
+                        lgLogDebug(lgGetHandle(), "\tWind gust:   %.2f", tr.gustSpeed);
                         lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
                     }
                     else {

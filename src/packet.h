@@ -66,8 +66,6 @@ typedef struct {
     float               batteryPercentage;
     float               batteryTemperature;
 
-    float               vsysVoltage;
-    
     float               temperature;
     float               pressure;
     float               humidity;
