@@ -14,6 +14,7 @@
 #define FRIDAY							6
 #define SATURDAY						7
 
+void    tmUpdate(void);
 void    tmInitialiseUptimeClock(void);
 char *  tmGetUptime(void);
 char *  tmGetTimeStamp(char * pszBuffer, size_t bufferLen, bool includeMicroseconds);

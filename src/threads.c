@@ -305,6 +305,7 @@ void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
     ** we only want to count the rainfall reading (mm/h)
     ** once per hour...
     */
+    tmUpdate();
     hour = tmGetHour();
 
     lgLogDebug(lgGetHandle(), "Adding rainfall for hour %d", hour);
@@ -353,8 +354,6 @@ void * db_update_thread(void * pParms) {
 
             updateSummary(&ds, tr);
 
-            hour = tmGetHour();
-            minute = tmGetMinute();
             tmGetSimpleTimeStamp(timestamp, TIMESTAMP_STR_LEN);
 
             lgLogDebug(lgGetHandle(), "Inserting weather data");
@@ -389,6 +388,11 @@ void * db_update_thread(void * pParms) {
             );
 
             dbExecute(wctlConnection, szInsertStr);
+
+            tmUpdate();
+            
+            hour = tmGetHour();
+            minute = tmGetMinute();
 
             /*
             ** On the stroke of midnight, write the daily_summary

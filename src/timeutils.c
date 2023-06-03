@@ -52,7 +52,7 @@ static char * _getUptime(uint32_t uptimeSeconds) {
 	return szUptime;
 }
 
-static void _updateTime(void) {
+void tmUpdate(void) {
 	struct timeval		tv;
 	time_t				t;
 
@@ -80,7 +80,7 @@ char * tmGetUptime(void) {
 }
 
 char * tmGetTimeStamp(char * pszBuffer, size_t bufferLen, bool includeMicroseconds) {
-	_updateTime();
+	tmUpdate();
 
 	if (includeMicroseconds) {
 		snprintf(
