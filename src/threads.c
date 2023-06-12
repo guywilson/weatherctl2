@@ -29,11 +29,11 @@ const char *    dir_ordinal[16] = {
                     "NE", "WSW", "SW", "NNW", 
                     "N", "NWN", "NW", "W"};
 
-const uint16_t  dir_adc_min[16] = {
-                    450, 593, 686, 832, 
-                    1126, 1473, 1749, 2123, 
-                    2496, 2838, 3120, 3269, 
-                    3479, 3635, 3752, 3881};
+const uint16_t  dir_adc_max[16] = {
+                    63,   82,   91,  128,
+                   196,  274,  336,  538,
+                   651, 1013, 1113, 1392,
+                  1808, 2071, 2542, 3149};
 
 /*
 ** Wind speed in mph:
@@ -117,7 +117,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     ** Find wind direction...
     */
     for (i = 0;i < 16;i++) {
-        if (source->rawWindDir >= dir_adc_min[i]) {
+        if (source->rawWindDir < dir_adc_max[i]) {
             target->windDirection = dir_ordinal[i];
             break;
         }
