@@ -194,64 +194,49 @@ void * NRF_listen_thread(void * pParms) {
                 case PACKET_ID_WEATHER:
                     memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
-                    if (pkt.chipID == stationID) {
-                        _transformWeatherPacket(&tr, &pkt);
+                    _transformWeatherPacket(&tr, &pkt);
 
-                        qItem.item = &tr;
-                        qItem.itemLength = sizeof(weather_transform_t);
+                    qItem.item = &tr;
+                    qItem.itemLength = sizeof(weather_transform_t);
 
-                        qPutItem(&dbq, qItem);
+                    qPutItem(&dbq, qItem);
 
-                        lgLogDebug(lgGetHandle(), "Got weather data:");
-                        lgLogDebug(lgGetHandle(), "\tChipID:      0x%08X", pkt.chipID);
-                        lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                        lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
-                        lgLogDebug(lgGetHandle(), "\tBat. temp:   %.2f", tr.batteryTemperature);
-                        lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
-                        lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
-                        lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
-                        lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
-                        lgLogDebug(lgGetHandle(), "\tUV Index:    %.1f", tr.uvIndex);
-                        lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
-                        lgLogDebug(lgGetHandle(), "\tWind gust:   %.2f", tr.gustSpeed);
-                        lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
-                    }
-                    else {
-                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", pkt.chipID);
-                    }
+                    lgLogDebug(lgGetHandle(), "Got weather data:");
+                    lgLogDebug(lgGetHandle(), "\tStatus:      0x%04X", pkt.status);
+                    lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
+                    lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
+                    lgLogDebug(lgGetHandle(), "\tBat. temp:   %.2f", tr.batteryTemperature);
+                    lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
+                    lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
+                    lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
+                    lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                    lgLogDebug(lgGetHandle(), "\tUV Index:    %.1f", tr.uvIndex);
+                    lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
+                    lgLogDebug(lgGetHandle(), "\tWind gust:   %.2f", tr.gustSpeed);
+                    lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
                     break;
 
                 case PACKET_ID_SLEEP:
                     memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
 
-                    if (sleepPkt.chipID == stationID) {
-                        pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
-                        pkt.rawBatteryTemperature = sleepPkt.rawBatteryTemperature;
+                    pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
+                    pkt.rawBatteryTemperature = sleepPkt.rawBatteryTemperature;
 
-                        memcpy(pkt.rawALS_UV, sleepPkt.rawALS_UV, 5);
+                    memcpy(pkt.rawALS_UV, sleepPkt.rawALS_UV, 5);
 
-                        _transformWeatherPacket(&tr, &pkt);
+                    _transformWeatherPacket(&tr, &pkt);
 
-                        lgLogStatus(lgGetHandle(), "Got sleep packet:");
-                        lgLogStatus(lgGetHandle(), "\tChipID:      0x%08X", sleepPkt.chipID);
-                        lgLogStatus(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                        lgLogStatus(lgGetHandle(), "\tLux:         %.2f", tr.lux);
-                        lgLogStatus(lgGetHandle(), "\tSleep for:   %d", (int)sleepPkt.sleepHours);
-                    }
-                    else {
-                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", sleepPkt.chipID);
-                    }
+                    lgLogStatus(lgGetHandle(), "Got sleep packet:");
+                    lgLogStatus(lgGetHandle(), "\tStatus:      0x%08X", sleepPkt.status);
+                    lgLogStatus(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
+                    lgLogStatus(lgGetHandle(), "\tLux:         %.2f", tr.lux);
+                    lgLogStatus(lgGetHandle(), "\tSleep for:   %d", (int)sleepPkt.sleepHours);
                     break;
 
                 case PACKET_ID_WATCHDOG:
                     memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
 
-                    if (wdPkt.chipID == stationID) {
-                        lgLogStatus(lgGetHandle(), "Got watchdog packet");
-                    }
-                    else {
-                        lgLogStatus(lgGetHandle(), "Failed chipID check, got 0x%08X", wdPkt.chipID);
-                    }
+                    lgLogStatus(lgGetHandle(), "Got watchdog packet");
                     break;
 
                 default:

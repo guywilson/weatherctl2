@@ -15,7 +15,7 @@ typedef struct {                                    // O/S  - Description
                                                     // ----   ---------------------------------
     uint8_t             packetID;                   // 0x00 - Identify this as a weather packet
 
-    uint16_t            chipID;                     // 0x01 - ID of the RP2040
+    uint16_t            status;                     // 0x01 - Status bits
 
     uint16_t            rawWindDir;                 // 0x03 - Raw ADC wind direction
 
@@ -38,7 +38,7 @@ typedef struct {                                    // O/S  - Description
                                                     // ----   ---------------------------------
     uint8_t             packetID;                   // 0x00 - Identify this as a weather packet
 
-    uint16_t            chipID;                     // 0x01 - ID of the RP2040
+    uint16_t            status;                     // 0x01 - Status bits
 
     uint16_t            sleepHours;                 // 0x03 - How many hours is the weather station sleeping for?
     uint16_t            rawBatteryVolts;            // 0x05 - The last raw I2C value for battery V
@@ -54,7 +54,7 @@ typedef struct {                                    // O/S  - Description
                                                     // ----   ---------------------------------
     uint8_t             packetID;                   // 0x00 - Identify this as a weather packet
 
-    uint16_t            chipID;                     // 0x01 - ID of the RP2040
+    uint16_t            status;                     // 0x01 - Status bits
 
     uint8_t             padding[29];
 }
