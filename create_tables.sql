@@ -16,7 +16,8 @@ CREATE TABLE telemetry_data (
     created TIMESTAMP NOT NULL,
     battery_voltage NUMERIC(3,2),
     battery_percentage NUMERIC (5,2),
-    battery_temperature NUMERIC(5,2)
+    battery_temperature NUMERIC(5,2),
+    status_bits INTEGER
 );
 
 CREATE TABLE daily_summary (

@@ -53,12 +53,14 @@ const char * pszTelemetryInsertStmt =
 created, \
 battery_voltage, \
 battery_percentage, \
-battery_temperature) \
+battery_temperature, \
+status_bits) \
 values (\
 '%s', \
 %.2f, \
 %.2f, \
-%.2f);";
+%.2f, \
+%d);";
 
 const char * pszSummaryInsertStmt = 
 "INSERT INTO daily_summary (\
