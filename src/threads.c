@@ -115,6 +115,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
+    target->windDirection = "SSE";
+
     /*
     ** Find wind direction...
     */
