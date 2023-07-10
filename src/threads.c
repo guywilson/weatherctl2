@@ -98,6 +98,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
         target->humidity = 100.0;
     }
 
+    lgLogDebug(lgGetHandle(), "Raw ICP Temp: %u", (uint32_t)source->rawICPTemperature);
+    lgLogDebug(lgGetHandle(), "Raw ICP Pressure: %u", source->rawICPPressure);
+    
     target->pressure = 
         (float)((float)icp10125_get_pressure(
                             source->rawICPTemperature, 
