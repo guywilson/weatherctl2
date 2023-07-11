@@ -15,7 +15,6 @@
 #include "timeutils.h"
 #include "psql.h"
 #include "que.h"
-#include "icp10125.h"
 #include "ltr390.h"
 #include "utils.h"
 #include "packet.h"

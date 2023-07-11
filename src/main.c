@@ -13,7 +13,6 @@
 #include "logger.h"
 #include "posixthread.h"
 #include "timeutils.h"
-#include "icp10125.h"
 #include "nRF24L01.h"
 #include "NRF24.h"
 #include "threads.h"
@@ -198,7 +197,6 @@ int main(int argc, char ** argv) {
 	}
 
     setupNRF24L01();
-    icp10125_init();
 
     startThreads();
 
