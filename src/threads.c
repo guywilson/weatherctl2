@@ -96,7 +96,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug(lgGetHandle(), "Raw ICP Pressure: %u", source->rawICPPressure);
 
-    target->pressure = (float)source->rawICPPressure / 100.0f;
+    target->pressure = ((float)source->rawICPPressure / 100.0f) + 5.738f;
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
