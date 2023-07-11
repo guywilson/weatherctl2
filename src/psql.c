@@ -24,7 +24,7 @@ PGconn * dbConnect(const char * host, int port, const char * database, const cha
     connection = PQconnectdb(szConnection);
 
     if (PQstatus(connection) != CONNECTION_OK) {
-        lgLogError(lgGetHandle(), "Could not connect to database: %s:%s", database, PQerrorMessage(connection));
+        lgLogError("Could not connect to database: %s:%s", database, PQerrorMessage(connection));
 
         return NULL;
     }
@@ -42,13 +42,13 @@ int dbTransactionBegin(PGconn * connection) {
     queryResult = PQexec(connection, "BEGIN");
 
     if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        lgLogError(lgGetHandle(), "Error beginning transaction [%s]", PQerrorMessage(connection));
+        lgLogError("Error beginning transaction [%s]", PQerrorMessage(connection));
         PQclear(queryResult);
         
         return -1;
     }
 
-    lgLogDebug(lgGetHandle(), "Transaction - Open");
+    lgLogDebug("Transaction - Open");
 
     PQclear(queryResult);
 
@@ -61,13 +61,13 @@ int dbTransactionEnd(PGconn * connection) {
     queryResult = PQexec(connection, "END");
 
     if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        lgLogError(lgGetHandle(), "Error ending transaction [%s]", PQerrorMessage(connection));
+        lgLogError("Error ending transaction [%s]", PQerrorMessage(connection));
         PQclear(queryResult);
         
         return -1;
     }
 
-    lgLogDebug(lgGetHandle(), "Transaction - Closed");
+    lgLogDebug("Transaction - Closed");
 
     PQclear(queryResult);
 
@@ -82,7 +82,7 @@ PGresult * dbExecute(PGconn * connection, const char * sql) {
     r = PQexec(connection, sql);
 
     if (PQresultStatus(r) != PGRES_COMMAND_OK && PQresultStatus(r) != PGRES_TUPLES_OK) {
-        lgLogError(lgGetHandle(), "Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection));
+        lgLogError("Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection));
 
         if (r != NULL) {
             PQclear(r);
@@ -93,7 +93,7 @@ PGresult * dbExecute(PGconn * connection, const char * sql) {
         return NULL;
     }
     else {
-        lgLogDebug(lgGetHandle(), "Successfully executed statement [%s]", sql);
+        lgLogDebug("Successfully executed statement [%s]", sql);
     }
 
     dbTransactionEnd(connection);

@@ -22,16 +22,16 @@ typedef struct _log_handle_t        log_handle_t;
 log_handle_t *  lgGetHandle(void);
 int             lgOpen(const char * pszLogFile, const char * pszLogFlags);
 int             lgOpenStdout(const char * pszLogFlags);
-void            lgClose(log_handle_t * hlog);
-void            lgSetLogLevel(log_handle_t * hlog, int logLevel);
-int             lgGetLogLevel(log_handle_t * hlog);
-bool            lgCheckLogLevel(log_handle_t * hlog, int logLevel);
-void            lgNewline(log_handle_t * hlog);
-int             lgLogInfo(log_handle_t * hlog, const char * fmt, ...);
-int             lgLogStatus(log_handle_t * hlog, const char * fmt, ...);
-int             lgLogDebug(log_handle_t * hlog, const char * fmt, ...);
-int             lgLogDebugNoCR(log_handle_t * hlog, const char * fmt, ...);
-int             lgLogError(log_handle_t * hlog, const char * fmt, ...);
-int             lgLogFatal(log_handle_t * hlog, const char * fmt, ...);
+void            lgClose(void);
+void            lgSetLogLevel(int logLevel);
+int             lgGetLogLevel(void);
+bool            lgCheckLogLevel(int logLevel);
+void            lgNewline(void);
+int             lgLogInfo(const char * fmt, ...);
+int             lgLogStatus(const char * fmt, ...);
+int             lgLogDebug(const char * fmt, ...);
+int             lgLogDebugNoCR(const char * fmt, ...);
+int             lgLogError(const char * fmt, ...);
+int             lgLogFatal(const char * fmt, ...);
 
 #endif

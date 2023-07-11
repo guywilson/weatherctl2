@@ -24,7 +24,7 @@ struct _cfg_handle_t {
 
 static cfg_handle_t         _cfg;
 
-cfg_handle_t * cfgGetHandle(void) {
+static cfg_handle_t * _cfgGetHandle(void) {
     static cfg_handle_t *       pCfg = NULL;
 
     if (pCfg == NULL) {
@@ -53,7 +53,7 @@ int cfgOpen(const char * pszConfigFileName) {
     int             itemNum = 0;
 	const char *	delimiters = "\n\r";
 
-    cfg_handle_t * pCfg = cfgGetHandle();
+    cfg_handle_t * pCfg = _cfgGetHandle();
 
     if (pCfg->isInstantiated) {
         fprintf(stderr, "Config manager already initialised. You should only call cfgOpen() once\n");
@@ -266,8 +266,11 @@ int cfgOpen(const char * pszConfigFileName) {
     return 0;
 }
 
-void cfgClose(cfg_handle_t * hcfg) {
-    int         i;
+void cfgClose(void) {
+    int                 i;
+    cfg_handle_t *      hcfg;
+
+    hcfg = _cfgGetHandle();
 
     hcfg->isInstantiated = false;
 
@@ -278,8 +281,11 @@ void cfgClose(cfg_handle_t * hcfg) {
     free(hcfg->map);
 }
 
-const char * cfgGetValue(cfg_handle_t * hcfg, const char * key) {
-    int         i;
+const char * cfgGetValue(const char * key) {
+    int                 i;
+    cfg_handle_t *      hcfg;
+
+    hcfg = _cfgGetHandle();
 
     if (hcfg->isInstantiated) {
         for (i = 0;i < hcfg->mapSize;i++) {
@@ -292,27 +298,27 @@ const char * cfgGetValue(cfg_handle_t * hcfg, const char * key) {
     return "";
 }
 
-bool cfgGetValueAsBoolean(cfg_handle_t * hcfg, const char * key) {
+bool cfgGetValueAsBoolean(const char * key) {
     const char *        pszValue;
 
-    pszValue = cfgGetValue(hcfg, key);
+    pszValue = cfgGetValue(key);
 
     return ((strcmp(pszValue, "yes") == 0 || strcmp(pszValue, "true") == 0 || strcmp(pszValue, "on") == 0) ? true : false);
 }
 
-int cfgGetValueAsInteger(cfg_handle_t * hcfg, const char * key) {
+int cfgGetValueAsInteger(const char * key) {
     const char *        pszValue;
 
-    pszValue = cfgGetValue(hcfg, key);
+    pszValue = cfgGetValue(key);
 
     return atoi(pszValue);
 }
 
-int32_t cfgGetValueAsLongInteger(cfg_handle_t * hcfg, const char * key) {
+int32_t cfgGetValueAsLongInteger(const char * key) {
     const char *        pszValue;
     int32_t             value;
 
-    pszValue = cfgGetValue(hcfg, key);
+    pszValue = cfgGetValue(key);
 
     if (strncmp(pszValue, "0x", 2) == 0 || strncmp(pszValue, "0X", 2) == 0) {
         value = (int32_t)strtol(&pszValue[2], NULL, 16);
@@ -324,11 +330,11 @@ int32_t cfgGetValueAsLongInteger(cfg_handle_t * hcfg, const char * key) {
     return value;
 }
 
-uint32_t cfgGetValueAsLongUnsigned(cfg_handle_t * hcfg, const char * key) {
+uint32_t cfgGetValueAsLongUnsigned(const char * key) {
     const char *        pszValue;
     uint32_t             value;
 
-    pszValue = cfgGetValue(hcfg, key);
+    pszValue = cfgGetValue(key);
 
     if (strncmp(pszValue, "0x", 2) == 0 || strncmp(pszValue, "0X", 2) == 0) {
         value = (uint32_t)strtoul(&pszValue[2], NULL, 16);
@@ -340,8 +346,11 @@ uint32_t cfgGetValueAsLongUnsigned(cfg_handle_t * hcfg, const char * key) {
     return value;
 }
 
-void cfgDumpConfig(cfg_handle_t * hcfg) {
-    int         i;
+void cfgDumpConfig(void) {
+    int                 i;
+    cfg_handle_t *      hcfg;
+
+    hcfg = _cfgGetHandle();
 
     if (hcfg->isInstantiated) {
         for (i = 0;i < hcfg->mapSize;i++) {

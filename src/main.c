@@ -36,39 +36,39 @@ void printUsage(void) {
 void handleSignal(int sigNum) {
 	switch (sigNum) {
 		case SIGINT:
-			lgLogStatus(lgGetHandle(), "Detected SIGINT, cleaning up...");
+			lgLogStatus("Detected SIGINT, cleaning up...");
 			break;
 
 		case SIGTERM:
-			lgLogStatus(lgGetHandle(), "Detected SIGTERM, cleaning up...");
+			lgLogStatus("Detected SIGTERM, cleaning up...");
 			break;
 
 		case SIGUSR1:
 			/*
 			** We're interpreting this as a request to turn on/off debug logging...
 			*/
-			lgLogStatus(lgGetHandle(), "Detected SIGUSR1...");
+			lgLogStatus("Detected SIGUSR1...");
 
-			if (lgCheckLogLevel(lgGetHandle(), LOG_LEVEL_INFO)) {
-				int level = lgGetLogLevel(lgGetHandle());
+			if (lgCheckLogLevel(LOG_LEVEL_INFO)) {
+				int level = lgGetLogLevel();
 				level &= ~LOG_LEVEL_INFO;
-				lgSetLogLevel(lgGetHandle(), level);
+				lgSetLogLevel(level);
 			}
 			else {
-				int level = lgGetLogLevel(lgGetHandle());
+				int level = lgGetLogLevel();
 				level |= LOG_LEVEL_INFO;
-				lgSetLogLevel(lgGetHandle(), level);
+				lgSetLogLevel(level);
 			}
 
-			if (lgCheckLogLevel(lgGetHandle(), LOG_LEVEL_DEBUG)) {
-				int level = lgGetLogLevel(lgGetHandle());
+			if (lgCheckLogLevel(LOG_LEVEL_DEBUG)) {
+				int level = lgGetLogLevel();
 				level &= ~LOG_LEVEL_DEBUG;
-				lgSetLogLevel(lgGetHandle(), level);
+				lgSetLogLevel(level);
 			}
 			else {
-				int level = lgGetLogLevel(lgGetHandle());
+				int level = lgGetLogLevel();
 				level |= LOG_LEVEL_DEBUG;
-				lgSetLogLevel(lgGetHandle(), level);
+				lgSetLogLevel(level);
 			}
 			return;
 	}
@@ -78,8 +78,8 @@ void handleSignal(int sigNum) {
     stopThreads();
     
     NRF_term(&nrf);
-    lgClose(lgGetHandle());
-    cfgClose(cfgGetHandle());
+    lgClose();
+    cfgClose();
 
     exit(0);
 }
@@ -149,8 +149,8 @@ int main(int argc, char ** argv) {
 	}
 
 	if (isDumpConfig) {
-        cfgDumpConfig(cfgGetHandle());
-        cfgClose(cfgGetHandle());
+        cfgDumpConfig();
+        cfgClose();
         return 0;
 	}
 
@@ -159,8 +159,8 @@ int main(int argc, char ** argv) {
 		free(pszLogFileName);
 	}
 	else {
-		const char * filename = cfgGetValue(cfgGetHandle(), "log.filename");
-		const char * level = cfgGetValue(cfgGetHandle(), "log.level");
+		const char * filename = cfgGetValue("log.filename");
+		const char * level = cfgGetValue("log.level");
 
 		if (strlen(filename) == 0 && strlen(level) == 0) {
 			lgOpenStdout(defaultLoggingLevel);
@@ -177,22 +177,22 @@ int main(int argc, char ** argv) {
 	 * Register signal handler for cleanup...
 	 */
 	if (signal(SIGINT, &handleSignal) == SIG_ERR) {
-		lgLogFatal(lgGetHandle(), "Failed to register signal handler for SIGINT");
+		lgLogFatal("Failed to register signal handler for SIGINT");
 		return -1;
 	}
 
 	if (signal(SIGTERM, &handleSignal) == SIG_ERR) {
-		lgLogFatal(lgGetHandle(), "Failed to register signal handler for SIGTERM");
+		lgLogFatal("Failed to register signal handler for SIGTERM");
 		return -1;
 	}
 
 	if (signal(SIGUSR1, &handleSignal) == SIG_ERR) {
-		lgLogFatal(lgGetHandle(), "Failed to register signal handler for SIGUSR1");
+		lgLogFatal("Failed to register signal handler for SIGUSR1");
 		return -1;
 	}
 
 	if (signal(SIGUSR2, &handleSignal) == SIG_ERR) {
-		lgLogFatal(lgGetHandle(), "Failed to register signal handler for SIGUSR2");
+		lgLogFatal("Failed to register signal handler for SIGUSR2");
 		return -1;
 	}
 

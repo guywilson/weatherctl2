@@ -61,7 +61,7 @@ static uint8_t _getPacketType(char * packet) {
 static uint16_t _getExpectedChipID(void) {
     uint16_t            chipID;
 
-    chipID = ((cfgGetValueAsLongUnsigned(cfgGetHandle(), "radio.stationid") >> 12) & 0xFFFF);
+    chipID = ((cfgGetValueAsLongUnsigned("radio.stationid") >> 12) & 0xFFFF);
 
     return chipID;
 }
@@ -70,15 +70,15 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     int         i;
     float       anemometerFactor;
 
-    lgLogDebug(lgGetHandle(), "Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
-    lgLogDebug(lgGetHandle(), "Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
+    lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
+    lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
 
     target->batteryVoltage = (float)source->rawBatteryVolts / 1000.0;
     target->batteryPercentage = (float)source->rawBatteryPercentage / 10.0;    
 
     target->status_bits = (int32_t)(source->status & 0x0000FFFF);
 
-    lgLogDebug(lgGetHandle(), "Raw temperature: %d", (int)source->rawTemperature);
+    lgLogDebug("Raw temperature: %d", (int)source->rawTemperature);
 
     /*
     ** TMP117 temperature
@@ -97,22 +97,21 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
         target->humidity = 100.0;
     }
 
-    lgLogDebug(lgGetHandle(), "Raw ICP Pressure: %u", source->rawICPPressure);
+    lgLogDebug("Raw ICP Pressure: %u", source->rawICPPressure);
 
     target->pressure = 
         ((float)source->rawICPPressure / 100.0f) + 
         (strtof(cfgGetValue(
-                cfgGetHandle(), 
                 "calibration.altitude"), NULL) * 
         HPA_ALITUDE_COMPENSATION);
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
 
-    lgLogDebug(lgGetHandle(), "Raw windspeed: %u", (uint32_t)source->rawWindspeed);
-    lgLogDebug(lgGetHandle(), "Raw rainfall: %u", (uint32_t)source->rawRainfall);
+    lgLogDebug("Raw windspeed: %u", (uint32_t)source->rawWindspeed);
+    lgLogDebug("Raw rainfall: %u", (uint32_t)source->rawRainfall);
 
-    anemometerFactor = strtof(cfgGetValue(cfgGetHandle(), "calibration.anemometerfactor"), NULL);
+    anemometerFactor = strtof(cfgGetValue("calibration.anemometerfactor"), NULL);
 
     target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH * anemometerFactor;
     target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH * anemometerFactor;
@@ -161,7 +160,7 @@ void * NRF_listen_thread(void * pParms) {
 
     nrf_p nrf = getNRFReference();
 
-    lgLogInfo(lgGetHandle(), "Opening NRF24L01 device");
+    lgLogInfo("Opening NRF24L01 device");
 
     NRF_init(nrf);
 
@@ -171,28 +170,28 @@ void * NRF_listen_thread(void * pParms) {
 	rtn = NRF_read_register(nrf, NRF24L01_REG_CONFIG, rxBuffer, 1);
 
     if (rtn < 0) {
-        lgLogError(lgGetHandle(), "Failed to transfer SPI data: %s\n", lguErrorText(rtn));
+        lgLogError("Failed to transfer SPI data: %s\n", lguErrorText(rtn));
 
         return NULL;
     }
 
-    lgLogInfo(lgGetHandle(), "Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
+    lgLogInfo("Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
 
     if (rxBuffer[0] == 0x00) {
-        lgLogError(lgGetHandle(), "Config read back as 0x00, device is probably not plugged in?\n\n");
+        lgLogError("Config read back as 0x00, device is probably not plugged in?\n\n");
         return NULL;
     }
 
     stationID = _getExpectedChipID();
 
-    lgLogInfo(lgGetHandle(), "Read station ID from config as: 0x%08X", stationID);
+    lgLogInfo("Read station ID from config as: 0x%08X", stationID);
 
     while (true) {
         while (NRF_data_ready(nrf)) {
             NRF_get_payload(nrf, rxBuffer);
 
             if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
-                lgLogDebug(lgGetHandle(), "%s", szDumpBuffer);
+                lgLogDebug("%s", szDumpBuffer);
             }
 
             packetID = _getPacketType(rxBuffer);
@@ -208,18 +207,18 @@ void * NRF_listen_thread(void * pParms) {
 
                     qPutItem(&dbq, qItem);
 
-                    lgLogDebug(lgGetHandle(), "Got weather data:");
-                    lgLogDebug(lgGetHandle(), "\tStatus:      0x%04X", pkt.status);
-                    lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                    lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
-                    lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
-                    lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
-                    lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
-                    lgLogDebug(lgGetHandle(), "\tLux:         %.2f", tr.lux);
-                    lgLogDebug(lgGetHandle(), "\tUV Index:    %.1f", tr.uvIndex);
-                    lgLogDebug(lgGetHandle(), "\tWind speed:  %.2f", tr.windspeed);
-                    lgLogDebug(lgGetHandle(), "\tWind gust:   %.2f", tr.gustSpeed);
-                    lgLogDebug(lgGetHandle(), "\tRainfall:    %.2f", tr.rainfall);
+                    lgLogDebug("Got weather data:");
+                    lgLogDebug("\tStatus:      0x%04X", pkt.status);
+                    lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
+                    lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
+                    lgLogDebug("\tTemperature: %.2f", tr.temperature);
+                    lgLogDebug("\tPressure:    %.2f", tr.pressure);
+                    lgLogDebug("\tHumidity:    %d%%", (int)tr.humidity);
+                    lgLogDebug("\tLux:         %.2f", tr.lux);
+                    lgLogDebug("\tUV Index:    %.1f", tr.uvIndex);
+                    lgLogDebug("\tWind speed:  %.2f", tr.windspeed);
+                    lgLogDebug("\tWind gust:   %.2f", tr.gustSpeed);
+                    lgLogDebug("\tRainfall:    %.2f", tr.rainfall);
                     break;
 
                 case PACKET_ID_SLEEP:
@@ -231,21 +230,21 @@ void * NRF_listen_thread(void * pParms) {
 
                     _transformWeatherPacket(&tr, &pkt);
 
-                    lgLogStatus(lgGetHandle(), "Got sleep packet:");
-                    lgLogStatus(lgGetHandle(), "\tStatus:      0x%08X", sleepPkt.status);
-                    lgLogStatus(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
-                    lgLogStatus(lgGetHandle(), "\tLux:         %.2f", tr.lux);
-                    lgLogStatus(lgGetHandle(), "\tSleep for:   %d", (int)sleepPkt.sleepHours);
+                    lgLogStatus("Got sleep packet:");
+                    lgLogStatus("\tStatus:      0x%08X", sleepPkt.status);
+                    lgLogStatus("\tBat. volts:  %.2f", tr.batteryVoltage);
+                    lgLogStatus("\tLux:         %.2f", tr.lux);
+                    lgLogStatus("\tSleep for:   %d", (int)sleepPkt.sleepHours);
                     break;
 
                 case PACKET_ID_WATCHDOG:
                     memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
 
-                    lgLogStatus(lgGetHandle(), "Got watchdog packet");
+                    lgLogStatus("Got watchdog packet");
                     break;
 
                 default:
-                    lgLogError(lgGetHandle(), "Undefined packet type received: ID[0x%02X]", packetID);
+                    lgLogError("Undefined packet type received: ID[0x%02X]", packetID);
                     break;
             }
 
@@ -298,7 +297,7 @@ void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
     tmUpdate();
     hour = tmGetHour();
 
-    lgLogDebug(lgGetHandle(), "Adding rainfall for hour %d", hour);
+    lgLogDebug("Adding rainfall for hour %d", hour);
 
     if (!(ds->isHourAccountedBitmap & (1 << hour))) {
         ds->total_rainfall += tr->rainfall;
@@ -321,14 +320,14 @@ void * db_update_thread(void * pParms) {
     memset(&ds, 0, sizeof(daily_summary_t));
 
     wctlConnection = dbConnect(
-            cfgGetValue(cfgGetHandle(), "db.host"), 
-            cfgGetValueAsInteger(cfgGetHandle(), "db.port"),
-            cfgGetValue(cfgGetHandle(), "db.database"),
-            cfgGetValue(cfgGetHandle(), "db.user"),
-            cfgGetValue(cfgGetHandle(), "db.password"));
+            cfgGetValue("db.host"), 
+            cfgGetValueAsInteger("db.port"),
+            cfgGetValue("db.database"),
+            cfgGetValue("db.user"),
+            cfgGetValue("db.password"));
 
     if (wctlConnection == NULL) {
-        lgLogError(lgGetHandle(), "Could not connect to database %s", cfgGetValue(cfgGetHandle(), "db.database"));
+        lgLogError("Could not connect to database %s", cfgGetValue("db.database"));
         return NULL;
     }
 
@@ -340,13 +339,13 @@ void * db_update_thread(void * pParms) {
         if (qGetItem(&dbq, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
-            lgLogDebug(lgGetHandle(), "Updating summary structure");
+            lgLogDebug("Updating summary structure");
 
             updateSummary(&ds, tr);
 
             tmGetSimpleTimeStamp(timestamp, TIMESTAMP_STR_LEN);
 
-            lgLogDebug(lgGetHandle(), "Inserting weather data");
+            lgLogDebug("Inserting weather data");
 
             sprintf(
                 szInsertStr,
@@ -366,7 +365,7 @@ void * db_update_thread(void * pParms) {
 
             pxtSleep(milliseconds, 100);
 
-            lgLogDebug(lgGetHandle(), "Inserting telemetry data");
+            lgLogDebug("Inserting telemetry data");
 
             sprintf(
                 szInsertStr,
@@ -398,7 +397,7 @@ void * db_update_thread(void * pParms) {
 
                 pxtSleep(milliseconds, 100);
 
-                lgLogDebug(lgGetHandle(), "Inserting daily summary");
+                lgLogDebug("Inserting daily summary");
 
                 sprintf(
                     szInsertStr,

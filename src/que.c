@@ -15,11 +15,11 @@ int qInit(que_handle_t * hque, uint32_t size) {
     hque->pQueue = (que_item_t *)malloc(sizeof(que_item_t) * size);
 
     if (hque->pQueue == NULL) {
-        lgLogFatal(lgGetHandle(), "qInit() - Failed to allocate queue memory of size %u", size);
+        lgLogFatal("qInit() - Failed to allocate queue memory of size %u", size);
         return -1;
     }
 
-    lgLogInfo(lgGetHandle(), "qInit() - Instantiated queue with %u items", size);
+    lgLogInfo("qInit() - Instantiated queue with %u items", size);
     
     hque->queueLength = size;
 
@@ -58,7 +58,7 @@ que_item_t * qGetItem(que_handle_t * hque, que_item_t * item) {
 	pthread_mutex_lock(&_mutex);
 
     if (hque->numItems == 0) {
-        lgLogError(lgGetHandle(), "qGetItem() - Queue is empty");
+        lgLogError("qGetItem() - Queue is empty");
         return NULL;
     }
 
@@ -66,7 +66,7 @@ que_item_t * qGetItem(que_handle_t * hque, que_item_t * item) {
     hque->numItems--;
 
     if (hque->headIndex == hque->queueLength) {
-        lgLogDebug(lgGetHandle(), "qGetItem() - Head wrap around");
+        lgLogDebug("qGetItem() - Head wrap around");
         hque->headIndex = 0;
     }
 
@@ -79,7 +79,7 @@ int qPutItem(que_handle_t * hque, que_item_t item) {
 	pthread_mutex_lock(&_mutex);
 
     if (hque->numItems == hque->queueLength) {
-        lgLogError(lgGetHandle(), "qPutItem() - Queue is full");
+        lgLogError("qPutItem() - Queue is full");
         return -1;
     }
 
@@ -87,7 +87,7 @@ int qPutItem(que_handle_t * hque, que_item_t item) {
     hque->numItems++;
 
     if (hque->tailIndex == hque->queueLength) {
-        lgLogDebug(lgGetHandle(), "qPutItem() - Tail wrap around");
+        lgLogDebug("qPutItem() - Tail wrap around");
         hque->tailIndex = 0;
     }
 

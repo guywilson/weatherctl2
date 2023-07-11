@@ -26,6 +26,17 @@ static pthread_mutex_t      _mutex = PTHREAD_MUTEX_INITIALIZER;
 static char                 _logBuffer[LOG_BUFFER_LENGTH];
 
 
+static log_handle_t * _lgGetHandle(void) {
+    static log_handle_t *       pLog = NULL;
+
+    if (pLog == NULL) {
+        pLog = &_log;
+        pLog->isInstantiated = false;
+    }
+
+    return pLog;
+}
+
 static int _logLevel_atoi(const char * pszLoggingLevel) {
     char *          pszLogLevel;
     char *          pszToken;
@@ -65,9 +76,10 @@ static int _logLevel_atoi(const char * pszLoggingLevel) {
     return logLevel;
 }
 
-int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const char * fmt, va_list args) {
-    int         bytesWritten = 0;
-    char        szTimestamp[TIMESTAMP_STR_LEN];
+int _log_message(int logLevel, bool addCR, const char * fmt, va_list args) {
+    int                 bytesWritten = 0;
+    char                szTimestamp[TIMESTAMP_STR_LEN];
+    log_handle_t *      hlog = _lgGetHandle();
 
 	pthread_mutex_lock(&_mutex);
 
@@ -124,19 +136,8 @@ int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const char * fmt
     return bytesWritten;
 }
 
-log_handle_t * lgGetHandle(void) {
-    static log_handle_t *       pLog = NULL;
-
-    if (pLog == NULL) {
-        pLog = &_log;
-        pLog->isInstantiated = false;
-    }
-
-    return pLog;
-}
-
 int lgOpen(const char * pszLogFile, const char * pszLogFlags) {
-    log_handle_t * pLog = lgGetHandle();
+    log_handle_t * pLog = _lgGetHandle();
 
     if (!pLog->isInstantiated) {
         pLog->fptr = fopen(pszLogFile, "a");
@@ -159,7 +160,7 @@ int lgOpen(const char * pszLogFile, const char * pszLogFlags) {
 }
 
 int lgOpenStdout(const char * pszLogFlags) {
-    log_handle_t * pLog = lgGetHandle();
+    log_handle_t * pLog = _lgGetHandle();
 
     if (!pLog->isInstantiated) {
         pLog->fptr = stdout;
@@ -176,101 +177,111 @@ int lgOpenStdout(const char * pszLogFlags) {
     return 0;
 }
 
-void lgClose(log_handle_t * hlog) {
+void lgClose(void) {
+    log_handle_t *      hlog = _lgGetHandle();
+
     fclose(hlog->fptr);
 
     hlog->logLevel = 0;
     hlog->isInstantiated = false;
 }
 
-void lgSetLogLevel(log_handle_t * hlog, int logLevel) {
+void lgSetLogLevel(int logLevel) {
+    log_handle_t *      hlog = _lgGetHandle();
+
     hlog->logLevel = logLevel;
 }
 
-int lgGetLogLevel(log_handle_t * hlog) {
+int lgGetLogLevel(void) {
+    log_handle_t *      hlog = _lgGetHandle();
+
     return hlog->logLevel;
 }
 
-bool lgCheckLogLevel(log_handle_t * hlog, int logLevel) {
+bool lgCheckLogLevel(int logLevel) {
+    log_handle_t *      hlog = _lgGetHandle();
+
     return ((hlog->logLevel & logLevel) == logLevel ? true : false);
 }
 
-void lgNewline(log_handle_t * hlog) {
+void lgNewline(void) {
+    log_handle_t *      hlog = _lgGetHandle();
+
     fprintf(hlog->fptr, "\n");
 }
 
-int lgLogInfo(log_handle_t * hlog, const char * fmt, ...) {
-    va_list     args;
-    int         bytesWritten;
+int lgLogInfo(const char * fmt, ...) {
+    va_list             args;
+    int                 bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_INFO, true, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_INFO, true, fmt, args);
     
     va_end(args);
     
     return bytesWritten;
 }
 
-int lgLogStatus(log_handle_t * hlog, const char * fmt, ...) {
+int lgLogStatus(const char * fmt, ...) {
     va_list     args;
     int         bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_STATUS, true, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_STATUS, true, fmt, args);
     
     va_end(args);
     
     return bytesWritten;
 }
 
-int lgLogDebug(log_handle_t * hlog, const char * fmt, ...) {
+int lgLogDebug(const char * fmt, ...) {
     va_list     args;
     int         bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_DEBUG, true, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_DEBUG, true, fmt, args);
     
     va_end(args);
     
     return bytesWritten;
 }
 
-int lgLogDebugNoCR(log_handle_t * hlog, const char * fmt, ...) {
+int lgLogDebugNoCR(const char * fmt, ...) {
     va_list     args;
     int         bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_DEBUG, false, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_DEBUG, false, fmt, args);
     
     va_end(args);
     
     return bytesWritten;
 }
 
-int lgLogError(log_handle_t * hlog, const char * fmt, ...) {
+int lgLogError(const char * fmt, ...) {
     va_list     args;
     int         bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_ERROR, true, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_ERROR, true, fmt, args);
     
     va_end(args);
     
     return bytesWritten;
 }
 
-int lgLogFatal(log_handle_t * hlog, const char * fmt, ...) {
+int lgLogFatal(const char * fmt, ...) {
     va_list     args;
     int         bytesWritten;
 
     va_start (args, fmt);
     
-    bytesWritten = _log_message(hlog, LOG_LEVEL_FATAL, true, fmt, args);
+    bytesWritten = _log_message(LOG_LEVEL_FATAL, true, fmt, args);
     
     va_end(args);
     
