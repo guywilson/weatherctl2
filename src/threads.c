@@ -70,9 +70,6 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug(lgGetHandle(), "Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug(lgGetHandle(), "Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
-    lgLogDebug(lgGetHandle(), "Raw battery temp: %u", (uint32_t)source->rawBatteryTemperature);
-
-    // target->vsysVoltage = ((float)source->rawVSYSVoltage / 4096.0) * 3 * 3.3;
 
     target->batteryVoltage = (float)source->rawBatteryVolts / 1000.0;
     target->batteryPercentage = (float)source->rawBatteryPercentage / 10.0;    
@@ -98,14 +95,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
         target->humidity = 100.0;
     }
 
-    lgLogDebug(lgGetHandle(), "Raw ICP Temp: %u", (uint32_t)source->rawICPTemperature);
     lgLogDebug(lgGetHandle(), "Raw ICP Pressure: %u", source->rawICPPressure);
-    
-    target->pressure = 
-        (float)((float)icp10125_get_pressure(
-                            source->rawICPTemperature, 
-                            source->rawICPPressure) / 
-                            100.0f);
+
+    target->pressure = (float)source->rawICPPressure / 100.0f;
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
@@ -211,7 +203,6 @@ void * NRF_listen_thread(void * pParms) {
                     lgLogDebug(lgGetHandle(), "\tStatus:      0x%04X", pkt.status);
                     lgLogDebug(lgGetHandle(), "\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug(lgGetHandle(), "\tBat. percent:%.2f", tr.batteryPercentage);
-                    lgLogDebug(lgGetHandle(), "\tBat. temp:   %.2f", tr.batteryTemperature);
                     lgLogDebug(lgGetHandle(), "\tTemperature: %.2f", tr.temperature);
                     lgLogDebug(lgGetHandle(), "\tPressure:    %.2f", tr.pressure);
                     lgLogDebug(lgGetHandle(), "\tHumidity:    %d%%", (int)tr.humidity);
@@ -226,7 +217,6 @@ void * NRF_listen_thread(void * pParms) {
                     memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
 
                     pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
-                    pkt.rawBatteryTemperature = sleepPkt.rawBatteryTemperature;
 
                     memcpy(pkt.rawALS_UV, sleepPkt.rawALS_UV, 5);
 
