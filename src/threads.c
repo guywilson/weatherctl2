@@ -39,7 +39,7 @@ const uint16_t  dir_adc_max[16] = {
 */
 #define ANEMOMETER_MPH              0.0052658575613333f
 
-#define HPA_ALITUDE_COMPENSATION    0.103674541f
+#define HPA_ALITUDE_COMPENSATION    0.103448276f
 
 /*
 ** Each tip of the bucket in the rain gauge equates
