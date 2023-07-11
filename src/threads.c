@@ -37,7 +37,9 @@ const uint16_t  dir_adc_max[16] = {
 /*
 ** Wind speed in mph:
 */
-#define ANEMOMETER_MPH              0.0062137119223733f
+#define ANEMOMETER_MPH              0.0052658575613333f
+
+#define HPA_ALITUDE_COMPENSATION    0.103674541f
 
 /*
 ** Each tip of the bucket in the rain gauge equates
@@ -66,6 +68,7 @@ static uint16_t _getExpectedChipID(void) {
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     int         i;
+    float       anemometerFactor;
 
     lgLogDebug(lgGetHandle(), "Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug(lgGetHandle(), "Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
@@ -96,7 +99,12 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug(lgGetHandle(), "Raw ICP Pressure: %u", source->rawICPPressure);
 
-    target->pressure = ((float)source->rawICPPressure / 100.0f) + 5.738f;
+    target->pressure = 
+        ((float)source->rawICPPressure / 100.0f) + 
+        ((float)cfgGetValueAsInteger(
+                            cfgGetHandle(), 
+                            "calibration.altitude") * 
+        HPA_ALITUDE_COMPENSATION);
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
@@ -104,8 +112,10 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     lgLogDebug(lgGetHandle(), "Raw windspeed: %u", (uint32_t)source->rawWindspeed);
     lgLogDebug(lgGetHandle(), "Raw rainfall: %u", (uint32_t)source->rawRainfall);
 
-    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH;
-    target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH;
+    anemometerFactor = strtof(cfgGetValue(cfgGetHandle(), "calibration.anemometerfactor"), NULL);
+
+    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH * anemometerFactor;
+    target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH * anemometerFactor;
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
     target->windDirection = "SSE";
