@@ -101,9 +101,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->pressure = 
         ((float)source->rawICPPressure / 100.0f) + 
-        ((float)cfgGetValueAsInteger(
-                            cfgGetHandle(), 
-                            "calibration.altitude") * 
+        (strtof(cfgGetValue(
+                cfgGetHandle(), 
+                "calibration.altitude"), NULL) * 
         HPA_ALITUDE_COMPENSATION);
 
     target->lux = computeLux(source->rawALS_UV);
