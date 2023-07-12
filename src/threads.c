@@ -69,6 +69,7 @@ static uint16_t _getExpectedChipID(void) {
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     int         i;
     float       anemometerFactor;
+    float       altitudeCompensation;
 
     lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
@@ -99,11 +100,16 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug("Raw ICP Pressure: %u", source->rawICPPressure);
 
+    altitudeCompensation = 
+                    strtof(
+                        cfgGetValue(
+                            "calibration.altitude"), 
+                        NULL) * 
+                    HPA_ALITUDE_COMPENSATION;
+
     target->pressure = 
         ((float)source->rawICPPressure / 100.0f) + 
-        (strtof(cfgGetValue(
-                "calibration.altitude"), NULL) * 
-        HPA_ALITUDE_COMPENSATION);
+        altitudeCompensation;
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
