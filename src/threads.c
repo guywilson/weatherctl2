@@ -107,6 +107,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                         NULL) * 
                     HPA_ALITUDE_COMPENSATION;
 
+    lgLogDebug("Barometer altitude offset: %2f", altitudeCompensation);
+    
     target->pressure = 
         ((float)source->rawICPPressure / 100.0f) + 
         altitudeCompensation;
