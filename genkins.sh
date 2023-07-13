@@ -17,15 +17,15 @@ echo -e ${ACTION}Checking Git repo
 echo -e =======================${NOCOLOR}
 
 BRANCH=$(sudo -u guy git rev-parse --abbrev-ref HEAD)
-if [ "$BRANCH" != "master" ] ; then
-    echo -e ${ERROR}Not on master. Aborting. ${NOCOLOR}
+if [ "$BRANCH" != "main" ] ; then
+    echo -e ${ERROR}Not on main. Aborting. ${NOCOLOR}
     echo
     exit 0
 fi
 
 sudo -u guy git fetch
 HEADHASH=$(sudo -u guy git rev-parse HEAD)
-UPSTREAMHASH=$(sudo -u guy git rev-parse master@{upstream})
+UPSTREAMHASH=$(sudo -u guy git rev-parse main@{upstream})
 
 if [ "$HEADHASH" != "$UPSTREAMHASH" ] ; then
     echo -e ${ACTION}Not up to date with origin. Pull from remote${NOCOLOR}
@@ -37,7 +37,7 @@ fi
 PULLRESULT=$(sudo -u guy git pull)
 
 if [ "$PULLRESULT" = "Already up to date." ] ; then
-    echo -e ${FINISHED}Current branch is up to date with origin/master.${NOCOLOR}
+    echo -e ${FINISHED}Current branch is up to date with origin/main.${NOCOLOR}
     exit 0
 fi
 
