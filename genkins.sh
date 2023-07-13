@@ -30,7 +30,7 @@ UPSTREAMHASH=$(sudo -u guy git rev-parse main@{upstream})
 if [ "$HEADHASH" != "$UPSTREAMHASH" ] ; then
     echo -e ${ACTION}Not up to date with origin. Pull from remote${NOCOLOR}
 else
-    echo -e ${FINISHED}Current branch is up to date with origin/master.${NOCOLOR}
+    echo -e ${FINISHED}Current branch is up to date with origin/main.${NOCOLOR}
     exit 0
 fi
 
