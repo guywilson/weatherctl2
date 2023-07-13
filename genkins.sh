@@ -58,7 +58,7 @@ echo -e ${ACTION}Build succeeded${NOCOLOR}
 
 # Stop the process...
 echo -e ${ACTION}Stopping wctl service...${NOCOLOR}
-systemctl stop weatherctl
+systemctl stop wctl
 
 echo -e ${ACTION}Installing new version...${NOCOLOR}
 make install
@@ -70,4 +70,4 @@ fi
 
 # Restart the process...
 echo -e ${ACTION}Restarting wctl service...${NOCOLOR}
-systemctl start weatherctl
+systemctl start wctl
