@@ -7,8 +7,8 @@
 ###############################################################################
 
 # Version number for WCTL
-MAJOR_VERSION = 0
-MINOR_VERSION = 1
+MAJOR_VERSION = 1
+MINOR_VERSION = 0
 
 # Directories
 SOURCE = src
@@ -61,7 +61,7 @@ $(DEP)/%.d: ;
 -include $(DEPFILES)
 
 install: $(TARGET)
-	cp $(TARGET) /usr/local/bin
+	cp $(TARGET) /usr/local/bin/wctl
 
 version:
 	$(VBUILD) -incfile wctl.ver -template version.c.template -out $(SOURCE)/version.c -major $(MAJOR_VERSION) -minor $(MINOR_VERSION)
