@@ -36,9 +36,11 @@ lux, \
 uv_index, \
 rainfall, \
 wind_speed, \
+wind_gust, \
 wind_direction) \
 values (\
 '%s', \
+%.2f, \
 %.2f, \
 %.2f, \
 %.2f, \

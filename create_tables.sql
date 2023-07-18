@@ -8,6 +8,7 @@ CREATE TABLE weather_data (
     uv_index NUMERIC(5,2),
     rainfall NUMERIC(7,2),
     wind_speed NUMERIC(5,2),
+    wind_gust NUMERIC(5,2),
     wind_direction CHAR(3)
 );
 
