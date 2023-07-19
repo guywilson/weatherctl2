@@ -35,7 +35,7 @@ float computeUVI(uint8_t * ALS_UV) {
     float           uvi;
     uint32_t        rawUVS;
 
-    rawUVS = (uint32_t)ALS_UV[4] | ((uint32_t)ALS_UV[3] << 8) | (((uint32_t)ALS_UV[2] & 0x00F0) << 16);
+    rawUVS = (uint32_t)ALS_UV[3] | ((uint32_t)ALS_UV[4] << 8) | (((uint32_t)ALS_UV[5] & 0x000F) << 16);
 
     lgLogDebug("Raw UVS: 0x%08X", rawUVS);
 
