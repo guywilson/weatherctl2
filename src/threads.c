@@ -266,8 +266,6 @@ void * NRF_listen_thread(void * pParms) {
 }
 
 void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
-    int         hour;
-
     if (tr->temperature > ds->max_temperature) {
         ds->max_temperature = tr->temperature;
     }
@@ -297,21 +295,11 @@ void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
         ds->max_wind_speed = tr->windspeed;
     }
 
-    /*
-    ** When calculating the total rainfall for the day,
-    ** we only want to count the rainfall reading (mm/h)
-    ** once per hour...
-    */
-    tmUpdate();
-    hour = tmGetHour();
-
-    lgLogDebug("Adding rainfall for hour %d", hour);
-
-    if (!(ds->isHourAccountedBitmap & (1 << hour))) {
-        ds->total_rainfall += tr->rainfall;
-
-        ds->isHourAccountedBitmap |= (1 << hour);
+    if (tr->gustSpeed > ds->max_wind_gust) {
+        ds->max_wind_gust = tr->gustSpeed;
     }
+
+    ds->total_rainfall += tr->rainfall;
 }
 
 void * db_update_thread(void * pParms) {
