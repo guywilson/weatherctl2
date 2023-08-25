@@ -84,6 +84,8 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
         isCalculated = true;
     }
 
+    lgLogDebug("Altitude compensation factor: %.2f", compensationFactor);
+    
     adjustedPressure = ((float)rawPressure / compensationFactor) / 100.0f;
 
     return adjustedPressure;
