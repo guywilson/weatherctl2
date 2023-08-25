@@ -40,7 +40,7 @@ const uint16_t  dir_adc_max[16] = {
 */
 #define ANEMOMETER_MPH              0.0052658575613333f
 
-#define ALITUDE_COMP_FACTOR         0.9999774423f
+#define ALITUDE_COMP_FACTOR         0.0000225577f
 #define ALTITUDE_COMP_POWER         5.25588f
 
 /*
@@ -78,14 +78,14 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
         altitude = strtof(cfgGetValue("calibration.altitude"), NULL);
 
         compensationFactor = (float)pow(
-                    (double)(ALITUDE_COMP_FACTOR * altitude), 
+                    (1.0f - (double)(ALITUDE_COMP_FACTOR * altitude)), 
                     (double)ALTITUDE_COMP_POWER);
 
         isCalculated = true;
     }
 
     lgLogDebug("Altitude compensation factor: %.2f", compensationFactor);
-    
+
     adjustedPressure = ((float)rawPressure / compensationFactor) / 100.0f;
 
     return adjustedPressure;
