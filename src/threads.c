@@ -70,23 +70,24 @@ static uint16_t _getExpectedChipID(void) {
 
 static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
     static bool         isCalculated = false;
-    static float        compensationFactor;
-    float               altitude;
+    static double       compensationFactor;
+    double              altitude;
     float               adjustedPressure;
 
     if (!isCalculated) {
-        altitude = strtof(cfgGetValue("calibration.altitude"), NULL);
+        altitude = strtod(cfgGetValue("calibration.altitude"), NULL);
 
-        compensationFactor = (float)pow(
-                    (1.0f - (double)(ALITUDE_COMP_FACTOR * altitude)), 
-                    (double)ALTITUDE_COMP_POWER);
+        compensationFactor = pow(
+                    ((double)1.0f - ((double)ALITUDE_COMP_FACTOR * altitude)), 
+                    (double)ALTITUDE_COMP_POWER) *
+                    (double)100.0f;
 
         isCalculated = true;
     }
 
     lgLogDebug("Altitude compensation factor: %.2f", compensationFactor);
 
-    adjustedPressure = ((float)rawPressure / compensationFactor) / 100.0f;
+    adjustedPressure = (float)((double)rawPressure / compensationFactor);
 
     return adjustedPressure;
 }
