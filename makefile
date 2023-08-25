@@ -32,8 +32,8 @@ CFLAGS = -c -O2 -Wall -pedantic -I/Users/guy/Library/include
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
-STDLIBS = -pthread -lm
-EXTLIBS = -lcrypto -lpq -llgpio -lstrutils
+STDLIBS = -pthread
+EXTLIBS = -lm -lcrypto -lpq -llgpio -lstrutils
 
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
 LINK.o = $(LINKER) $(STDLIBS) -o $@
