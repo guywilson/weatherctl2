@@ -2,6 +2,7 @@ CREATE TABLE weather_data (
     id SERIAL PRIMARY KEY,
     created TIMESTAMP NOT NULL,
     temperature NUMERIC(5,2),
+    actual_pressure NUMERIC(6,2),
     pressure NUMERIC(6,2),
     humidity NUMERIC(5,2),
     lux NUMERIC(8,2),

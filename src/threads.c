@@ -53,6 +53,7 @@ const uint16_t  dir_adc_max[16] = {
 static que_handle_t             dbq;
 static pxt_handle_t             nrfListenThread;
 static pxt_handle_t             dbUpdateThread;
+static pxt_handle_t             owmPostThread;
 
 static char                     szDumpBuffer[1024];
 
@@ -125,7 +126,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug("Raw ICP Pressure: %u", source->rawICPPressure);
 
-    target->pressure = _getAltitudeAdjustedPressure(source->rawICPPressure);
+    target->normalisedPressure = _getAltitudeAdjustedPressure(source->rawICPPressure);
+    target->actualPressure = (float)source->rawICPPressure / 100.0f;
 
     target->lux = computeLux(source->rawALS_UV);
     target->uvIndex = computeUVI(source->rawALS_UV);
@@ -152,24 +154,44 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     }
 }
 
-void startThreads(void) {
-    qInit(&dbq, 10U);
+static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
+    if (tr->temperature > ds->max_temperature) {
+        ds->max_temperature = tr->temperature;
+    }
+    if (tr->temperature < ds->min_temperature || (ds->min_temperature == 0.00 && tr->temperature > 0.00)) {
+        ds->min_temperature = tr->temperature;
+    }
 
-    pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
-    pxtStart(&nrfListenThread, NULL);
+    if (tr->normalisedPressure > ds->max_pressure) {
+        ds->max_pressure = tr->normalisedPressure;
+    }
+    if (tr->normalisedPressure < ds->min_pressure || (ds->min_pressure == 0.00 && tr->normalisedPressure > 0.00)) {
+        ds->min_pressure = tr->normalisedPressure;
+    }
 
-    pxtCreate(&dbUpdateThread, &db_update_thread, true);
-    pxtStart(&dbUpdateThread, NULL);
+    if (tr->humidity > ds->max_humidity) {
+        ds->max_humidity = tr->humidity;
+    }
+    if (tr->humidity < ds->min_humidity || (ds->min_humidity == 0.00 && tr->humidity > 0.00)) {
+        ds->min_humidity = tr->humidity;
+    }
+
+    if (tr->lux > ds->max_lux) {
+        ds->max_lux = tr->lux;
+    }
+
+    if (tr->windspeed > ds->max_wind_speed) {
+        ds->max_wind_speed = tr->windspeed;
+    }
+
+    if (tr->gustSpeed > ds->max_wind_gust) {
+        ds->max_wind_gust = tr->gustSpeed;
+    }
+
+    ds->total_rainfall += tr->rainfall;
 }
 
-void stopThreads(void) {
-    pxtStop(&dbUpdateThread);
-    pxtStop(&nrfListenThread);
-
-    qDestroy(&dbq);
-}
-
-void * NRF_listen_thread(void * pParms) {
+static void * NRF_listen_thread(void * pParms) {
     int                 rtn;
     uint16_t            stationID;
     char                rxBuffer[64];
@@ -234,7 +256,8 @@ void * NRF_listen_thread(void * pParms) {
                     lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
                     lgLogDebug("\tTemperature: %.2f", tr.temperature);
-                    lgLogDebug("\tPressure:    %.2f", tr.pressure);
+                    lgLogDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
+                    lgLogDebug("\tAct pressure:%.2f", tr.actualPressure);
                     lgLogDebug("\tHumidity:    %d%%", (int)tr.humidity);
                     lgLogDebug("\tLux:         %.2f", tr.lux);
                     lgLogDebug("\tUV Index:    %.1f", tr.uvIndex);
@@ -279,44 +302,7 @@ void * NRF_listen_thread(void * pParms) {
     return NULL;
 }
 
-void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
-    if (tr->temperature > ds->max_temperature) {
-        ds->max_temperature = tr->temperature;
-    }
-    if (tr->temperature < ds->min_temperature || (ds->min_temperature == 0.00 && tr->temperature > 0.00)) {
-        ds->min_temperature = tr->temperature;
-    }
-
-    if (tr->pressure > ds->max_pressure) {
-        ds->max_pressure = tr->pressure;
-    }
-    if (tr->pressure < ds->min_pressure || (ds->min_pressure == 0.00 && tr->pressure > 0.00)) {
-        ds->min_pressure = tr->pressure;
-    }
-
-    if (tr->humidity > ds->max_humidity) {
-        ds->max_humidity = tr->humidity;
-    }
-    if (tr->humidity < ds->min_humidity || (ds->min_humidity == 0.00 && tr->humidity > 0.00)) {
-        ds->min_humidity = tr->humidity;
-    }
-
-    if (tr->lux > ds->max_lux) {
-        ds->max_lux = tr->lux;
-    }
-
-    if (tr->windspeed > ds->max_wind_speed) {
-        ds->max_wind_speed = tr->windspeed;
-    }
-
-    if (tr->gustSpeed > ds->max_wind_gust) {
-        ds->max_wind_gust = tr->gustSpeed;
-    }
-
-    ds->total_rainfall += tr->rainfall;
-}
-
-void * db_update_thread(void * pParms) {
+static void * db_update_thread(void * pParms) {
     PGconn *                wctlConnection;
     que_item_t              item;
     weather_transform_t *   tr;
@@ -362,7 +348,8 @@ void * db_update_thread(void * pParms) {
                 pszWeatherInsertStmt,
                 timestamp,
                 tr->temperature,
-                tr->pressure,
+                tr->actualPressure,
+                tr->normalisedPressure,
                 tr->humidity,
                 tr->lux,
                 tr->uvIndex,
@@ -446,4 +433,33 @@ void * db_update_thread(void * pParms) {
     dbFinish(wctlConnection);
 
     return NULL;
+}
+
+static void * owm_post_thread(void * pParms) {
+    while (true) {
+        pxtSleep(milliseconds, 250);
+    }
+
+    return NULL;
+}
+
+void startThreads(void) {
+    qInit(&dbq, 10U);
+
+    pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
+    pxtStart(&nrfListenThread, NULL);
+
+    pxtCreate(&dbUpdateThread, &db_update_thread, true);
+    pxtStart(&dbUpdateThread, NULL);
+
+    pxtCreate(&owmPostThread, &owm_post_thread, true);
+    pxtStart(&owmPostThread, NULL);
+}
+
+void stopThreads(void) {
+    pxtStop(&dbUpdateThread);
+    pxtStop(&nrfListenThread);
+    pxtStop(&owmPostThread);
+
+    qDestroy(&dbq);
 }
