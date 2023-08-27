@@ -110,7 +110,7 @@ static float _computeDewPoint(uint16_t rawTemperature, uint16_t rawHumidity) {
     float           lnHumidity;
     float           temperature;
 
-    lnHumidity = (float)log10((double)_computeHumidity(rawHumidity) / (double)100.0f);
+    lnHumidity = (float)log((double)_computeHumidity(rawHumidity) / (double)100.0f);
     temperature = _computeTemperature(rawTemperature);
 
     dewPoint = 
