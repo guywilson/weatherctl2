@@ -190,6 +190,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                 ANEMOMETER_METRES_PER_SEC * 
                 anemometerFactor;
 
+    lgLogStatus("Wind speed (m/s): %.2f", target->windSpeedms);
+    lgLogStatus("Wind gust (m/s): %.2f", target->gustSpeedms);
+
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
     target->windDirection = "SSE";
