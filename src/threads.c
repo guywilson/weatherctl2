@@ -40,6 +40,7 @@ const uint16_t  dir_adc_max[16] = {
 ** Wind speed in mph:
 */
 #define ANEMOMETER_MPH              0.0052658575613333f
+#define ANEMOMETER_METRES_PER_SEC   0.0565486677646163f
 
 #define ALITUDE_COMP_FACTOR         0.0000225577f
 #define ALTITUDE_COMP_POWER         5.25588f
@@ -171,8 +172,24 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     anemometerFactor = strtof(cfgGetValue("calibration.anemometerfactor"), NULL);
 
-    target->windspeed = (float)source->rawWindspeed * ANEMOMETER_MPH * anemometerFactor;
-    target->gustSpeed = (float)source->rawWindGust * ANEMOMETER_MPH * anemometerFactor;
+    target->windspeed = 
+                (float)source->rawWindspeed * 
+                ANEMOMETER_MPH * 
+                anemometerFactor;
+    target->gustSpeed = 
+                (float)source->rawWindGust * 
+                ANEMOMETER_MPH * 
+                anemometerFactor;
+
+    target->windSpeedms = 
+                (float)source->rawWindspeed * 
+                ANEMOMETER_METRES_PER_SEC * 
+                anemometerFactor;
+    target->gustSpeedms = 
+                (float)source->rawWindGust * 
+                ANEMOMETER_METRES_PER_SEC * 
+                anemometerFactor;
+
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
     target->windDirection = "SSE";
