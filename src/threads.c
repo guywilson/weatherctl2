@@ -383,6 +383,7 @@ static void * db_update_thread(void * pParms) {
                 pszWeatherInsertStmt,
                 timestamp,
                 tr->temperature,
+                tr->dewPoint,
                 tr->actualPressure,
                 tr->normalisedPressure,
                 tr->humidity,
