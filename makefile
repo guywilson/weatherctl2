@@ -33,7 +33,7 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
 STDLIBS = -pthread
-EXTLIBS = -lm -lcrypto -lpq -llgpio -lstrutils
+EXTLIBS = -lm -lcrypto -lpq -llgpio -lcurl -lstrutils
 
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
 LINK.o = $(LINKER) $(STDLIBS) -o $@

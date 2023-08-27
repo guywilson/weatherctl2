@@ -73,6 +73,7 @@ typedef struct {
     int32_t             status_bits;
 
     float               temperature;
+    float               dewPoint;
     float               actualPressure;
     float               normalisedPressure;
     float               humidity;

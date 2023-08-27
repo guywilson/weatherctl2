@@ -30,6 +30,7 @@ const char * pszWeatherInsertStmt =
 "INSERT INTO weather_data (\
 created, \
 temperature, \
+dew_point, \
 actual_pressure, \
 pressure, \
 humidity, \
@@ -41,6 +42,7 @@ wind_gust, \
 wind_direction) \
 values (\
 '%s', \
+%.2f, \
 %.2f, \
 %.2f, \
 %.2f, \

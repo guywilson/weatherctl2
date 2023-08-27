@@ -7,6 +7,7 @@
 
 #include <lgpio.h>
 #include <postgresql/libpq-fe.h>
+#include <curl/curl.h>
 
 #include "NRF24.h"
 #include "nRF24L01.h"
@@ -42,6 +43,9 @@ const uint16_t  dir_adc_max[16] = {
 
 #define ALITUDE_COMP_FACTOR         0.0000225577f
 #define ALTITUDE_COMP_POWER         5.25588f
+
+#define TEMPERATURE_CELCIUS_FACTOR  0.0078125f
+#define HUMIDITY_RH_FACTOR          0.0019074f
 
 /*
 ** Each tip of the bucket in the rain gauge equates
@@ -93,6 +97,34 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
     return adjustedPressure;
 }
 
+static float inline _computeTemperature(uint16_t rawTemperature) {
+    return (float)rawTemperature * TEMPERATURE_CELCIUS_FACTOR;
+}
+
+static float inline _computeHumidity(uint16_t rawHumidity) {
+    return (-6.0f + ((float)rawHumidity * HUMIDITY_RH_FACTOR));
+}
+
+static float _computeDewPoint(uint16_t rawTemperature, uint16_t rawHumidity) {
+    float           dewPoint;
+    float           lnHumidity;
+    float           temperature;
+
+    lnHumidity = (float)log10((double)_computeHumidity(rawHumidity) / (double)100.0f);
+    temperature = _computeTemperature(rawTemperature);
+
+    dewPoint = 
+        243.04f * 
+        (lnHumidity + 
+        ((17.625f * temperature) / 
+        (243.04f + temperature))) / 
+        (17.625f - lnHumidity -
+        ((17.625f * temperature) / 
+        (243.04f + temperature)));
+
+    return dewPoint;
+}
+
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
     int         i;
     float       anemometerFactor;
@@ -110,12 +142,12 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     /*
     ** TMP117 temperature
     */
-    target->temperature = (float)source->rawTemperature * 0.0078125;
+    target->temperature = _computeTemperature(source->rawTemperature);
     
     /*
     ** SHT4x temperature & humidity
     */
-    target->humidity = -6.0f + ((float)source->rawHumidity * 0.0019074);
+    target->humidity = _computeHumidity(source->rawHumidity);;
 
     if (target->humidity < 0.0) {
         target->humidity = 0.0;
@@ -123,6 +155,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     else if (target->humidity > 100.0) {
         target->humidity = 100.0;
     }
+
+    target->dewPoint = _computeDewPoint(source->rawTemperature, source->rawHumidity);
 
     lgLogDebug("Raw ICP Pressure: %u", source->rawICPPressure);
 
@@ -256,6 +290,7 @@ static void * NRF_listen_thread(void * pParms) {
                     lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
                     lgLogDebug("\tTemperature: %.2f", tr.temperature);
+                    lgLogDebug("\tDew point:   %.2f", tr.dewPoint);
                     lgLogDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
                     lgLogDebug("\tAct pressure:%.2f", tr.actualPressure);
                     lgLogDebug("\tHumidity:    %d%%", (int)tr.humidity);
