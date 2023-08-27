@@ -49,6 +49,7 @@ values (\
 %.2f, \
 %.2f, \
 %.2f, \
+%.2f, \
 '%s');";
 
 const char * pszTelemetryInsertStmt = 
