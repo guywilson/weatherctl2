@@ -529,15 +529,11 @@ static char * getEncodedDate(void) {
         ch = buffer[i];
 
         if (ch == ' ') {
-            outputBuffer[j] = '+';
-
-            j++;
-            i++;
+            outputBuffer[j++] = '+';
         }
         else if (ch == ':') {
-            strcpy(outputBuffer, "%3A");
+            strcpy(&outputBuffer[j], "%3A");
             j += 3;
-            i++;
         }
         else {
             outputBuffer[j++] = ch;
@@ -581,6 +577,7 @@ static void * wow_post_thread(void * pParms) {
     char                    szCurlError[CURL_ERROR_SIZE];
     char                    szURL[1024];
     char                    szResponse[256];
+    char *                  encodedDate;
     const char *            baseURL;
     const char *            siteID;
     const char *            authKey;
@@ -614,6 +611,8 @@ static void * wow_post_thread(void * pParms) {
         if (qGetItem(&webPostQueue, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
+            encodedDate = getEncodedDate();
+
             tempF = (tr->temperature * 1.8) + 32;
             dewPointF = (tr->dewPoint * 1.8) + 32;
             pressureInHg = (tr->normalisedPressure) * HPA_TO_INHG;
@@ -628,8 +627,10 @@ static void * wow_post_thread(void * pParms) {
                 baseURL,
                 siteID,
                 authKey,
-                getEncodedDate(),
+                encodedDate,
                 softwareType);
+
+            free(encodedDate);
 
             sprintf(
                 &szURL[strlen(szURL)],
