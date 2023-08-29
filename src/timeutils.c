@@ -58,7 +58,7 @@ void tmUpdate(void) {
 
 	gettimeofday(&tv, NULL);
 
-	t = tv.tv_sec;
+	t = time(NULL);
 
 	_usec = tv.tv_usec;
 	_localTime = localtime(&t);

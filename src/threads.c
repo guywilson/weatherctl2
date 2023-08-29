@@ -514,35 +514,59 @@ static void * db_update_thread(void * pParms) {
     return NULL;
 }
 
-static char * getEncodedDate(void) {
-    char            buffer[20];
-    char *          outputBuffer;
-    int             i;
-    int             j = 0;
-    char            ch;
+static char * getEncodedTimeStamp(void) {
+    struct tm *         utc;
+	time_t				t;
+    char *              pszTimeBuffer;
 
-    outputBuffer = (char *)malloc(32);
+    pszTimeBuffer = (char *)malloc(24);
 
-    tmGetSimpleTimeStamp(buffer, 20);
+	t = time(NULL);
+	utc = gmtime(&t);
 
-    for (i = 0;i < 20;i++) {
-        ch = buffer[i];
+    snprintf(
+        pszTimeBuffer,
+        32,
+        "%d-%02d-%02d+%02d%%3A%02d%%3A%02d",
+        utc->tm_year + 1900,
+        utc->tm_mon + 1,
+        utc->tm_mday,
+        utc->tm_hour,
+        utc->tm_min,
+        utc->tm_sec);
 
-        if (ch == ' ') {
-            outputBuffer[j++] = '+';
-        }
-        else if (ch == ':') {
-            strcpy(&outputBuffer[j], "%3A");
-            j += 3;
-        }
-        else {
-            outputBuffer[j++] = ch;
-        }
-    }
-    outputBuffer[j] = 0;
-
-    return outputBuffer;
+	return pszTimeBuffer;
 }
+
+// static char * getEncodedDate(void) {
+//     char            buffer[20];
+//     char *          outputBuffer;
+//     int             i;
+//     int             j = 0;
+//     char            ch;
+
+//     outputBuffer = (char *)malloc(32);
+
+//     tmGetSimpleTimeStamp(buffer, 20);
+
+//     for (i = 0;i < 20;i++) {
+//         ch = buffer[i];
+
+//         if (ch == ' ') {
+//             outputBuffer[j++] = '+';
+//         }
+//         else if (ch == ':') {
+//             strcpy(&outputBuffer[j], "%3A");
+//             j += 3;
+//         }
+//         else {
+//             outputBuffer[j++] = ch;
+//         }
+//     }
+//     outputBuffer[j] = 0;
+
+//     return outputBuffer;
+// }
 
 static float getWindDir(const char * windOrdinal) {
     int         i;
@@ -611,7 +635,7 @@ static void * wow_post_thread(void * pParms) {
         if (qGetItem(&webPostQueue, &item) != NULL) {
             tr = (weather_transform_t *)item.item;
 
-            encodedDate = getEncodedDate();
+            encodedDate = getEncodedTimeStamp();
 
             tempF = (tr->temperature * 1.8) + 32;
             dewPointF = (tr->dewPoint * 1.8) + 32;
@@ -648,7 +672,7 @@ static void * wow_post_thread(void * pParms) {
             if (cfgGetValueAsBoolean("wow.isenabled")) {
                 curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
 
-                curl_easy_setopt(pCurl, CURLOPT_POST, 1L);
+                curl_easy_setopt(pCurl, CURLOPT_HTTPGET, 1L);
                 curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
                 curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc);
                 curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
