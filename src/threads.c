@@ -312,16 +312,16 @@ static void * NRF_listen_thread(void * pParms) {
 
                     _transformWeatherPacket(&tr, &pkt);
 
-                    // msgCounter++;
+                    msgCounter++;
 
-                    // if (msgCounter == 10) {
-                    //     webPostItem.item = &tr;
-                    //     webPostItem.itemLength = sizeof(weather_transform_t);
+                    if (msgCounter == 10) {
+                        webPostItem.item = &tr;
+                        webPostItem.itemLength = sizeof(weather_transform_t);
 
-                    //     qPutItem(&webPostQueue, webPostItem);
+                        qPutItem(&webPostQueue, webPostItem);
 
-                    //     msgCounter = 0;
-                    // }
+                        msgCounter = 0;
+                    }
 
                     qItem.item = &tr;
                     qItem.itemLength = sizeof(weather_transform_t);
@@ -581,10 +581,10 @@ static void * wow_post_thread(void * pParms) {
     char                    szCurlError[CURL_ERROR_SIZE];
     char                    szURL[1024];
     char                    szResponse[256];
-    char *                  baseURL;
-    char *                  siteID;
-    char *                  authKey;
-    char *                  softwareType;
+    const char *            baseURL;
+    const char *            siteID;
+    const char *            authKey;
+    const char *            softwareType;
 
     while (true) {
         pCurl = curl_easy_init();
@@ -603,6 +603,10 @@ static void * wow_post_thread(void * pParms) {
         authKey = cfgGetValue("wow.authkey");
         softwareType = cfgGetValue("wow.softwareid");
 
+        lgLogDebug("Base URL: %s", baseURL);
+        lgLogDebug("Site ID: %s", siteID);
+        lgLogDebug("Software ID: %s", softwareType);
+
         while (!qGetNumItems(&webPostQueue)) {
             pxtSleep(milliseconds, 25);
         }
@@ -615,9 +619,6 @@ static void * wow_post_thread(void * pParms) {
             pressureInHg = (tr->normalisedPressure) * HPA_TO_INHG;
 
             lgLogDebug("Preparing to POST to WoW service");
-            lgLogDebug("Base URL: %s", baseURL);
-            lgLogDebug("Site ID: %s", siteID);
-            lgLogDebug("Software ID: %s", softwareType);
 
             windDegrees = getWindDir(tr->windDirection);
 
@@ -641,21 +642,25 @@ static void * wow_post_thread(void * pParms) {
                 tr->gustSpeed,
                 windDegrees);
 
-
             lgLogInfo("Posting to URL: %s", szURL);
 
-            curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
+            if (cfgGetValueAsBoolean("wow.isenabled")) {
+                curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
 
-            curl_easy_setopt(pCurl, CURLOPT_POST, 1L);
-            curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
-            curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc);
-            curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
+                curl_easy_setopt(pCurl, CURLOPT_POST, 1L);
+                curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
+                curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc);
+                curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
 
-            result = curl_easy_perform(pCurl);
+                result = curl_easy_perform(pCurl);
 
-            if (result != CURLE_OK) {
-                lgLogError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
-                return NULL;
+                if (result != CURLE_OK) {
+                    lgLogError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
+                    return NULL;
+                }
+            }
+            else {
+                lgLogInfo("Posting disbaled by config - do nothing");
             }
         }
 
