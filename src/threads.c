@@ -609,7 +609,7 @@ static void * wow_post_thread(void * pParms) {
 
             sprintf(
                 szURL, 
-                "http://%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
+                "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
                 cfgGetValue("wow.baseurl"),
                 cfgGetValue("wow.siteid"),
                 cfgGetValue("wow.authkey"),
