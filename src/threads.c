@@ -57,6 +57,8 @@ const uint16_t  dir_adc_max[16] = {
 
 #define HPA_TO_INHG                 0.02952998057228486f
 
+#define TIME_BUFFER_SIZE            24
+
 /*
 ** Each tip of the bucket in the rain gauge equates
 ** to 0.2794mm of rainfall, so just multiply this
@@ -519,14 +521,14 @@ static char * getEncodedTimeStamp(void) {
 	time_t				t;
     char *              pszTimeBuffer;
 
-    pszTimeBuffer = (char *)malloc(24);
+    pszTimeBuffer = (char *)malloc(TIME_BUFFER_SIZE);
 
 	t = time(NULL);
 	utc = gmtime(&t);
 
     snprintf(
         pszTimeBuffer,
-        32,
+        TIME_BUFFER_SIZE,
         "%d-%02d-%02d+%02d%%3A%02d%%3A%02d",
         utc->tm_year + 1900,
         utc->tm_mon + 1,
