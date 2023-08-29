@@ -685,6 +685,8 @@ static void * wow_post_thread(void * pParms) {
                     lgLogError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
                     return NULL;
                 }
+
+                lgLogInfo("WoW service responded: %s", szResponse);
             }
             else {
                 lgLogInfo("Posting disbaled by config - do nothing");
