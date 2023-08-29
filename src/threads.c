@@ -674,7 +674,7 @@ static void * wow_post_thread(void * pParms) {
 
                 curl_easy_setopt(pCurl, CURLOPT_HTTPGET, 1L);
                 curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
-                curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc);
+                curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &CurlWrite_CallbackFunc);
                 curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
 
                 result = curl_easy_perform(pCurl);
