@@ -312,16 +312,16 @@ static void * NRF_listen_thread(void * pParms) {
 
                     _transformWeatherPacket(&tr, &pkt);
 
-                    msgCounter++;
+                    // msgCounter++;
 
-                    if (msgCounter == 10) {
-                        webPostItem.item = &tr;
-                        webPostItem.itemLength = sizeof(weather_transform_t);
+                    // if (msgCounter == 10) {
+                    //     webPostItem.item = &tr;
+                    //     webPostItem.itemLength = sizeof(weather_transform_t);
 
-                        qPutItem(&webPostQueue, webPostItem);
+                    //     qPutItem(&webPostQueue, webPostItem);
 
-                        msgCounter = 0;
-                    }
+                    //     msgCounter = 0;
+                    // }
 
                     qItem.item = &tr;
                     qItem.itemLength = sizeof(weather_transform_t);
@@ -581,6 +581,10 @@ static void * wow_post_thread(void * pParms) {
     char                    szCurlError[CURL_ERROR_SIZE];
     char                    szURL[1024];
     char                    szResponse[256];
+    char *                  baseURL;
+    char *                  siteID;
+    char *                  authKey;
+    char *                  softwareType;
 
     while (true) {
         pCurl = curl_easy_init();
@@ -594,6 +598,11 @@ static void * wow_post_thread(void * pParms) {
         curl_easy_setopt(pCurl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
         curl_easy_setopt(pCurl, CURLOPT_ERRORBUFFER, szCurlError);
 
+        baseURL = cfgGetValue("wow.baseurl");
+        siteID = cfgGetValue("wow.siteid");
+        authKey = cfgGetValue("wow.authkey");
+        softwareType = cfgGetValue("wow.softwareid");
+
         while (!qGetNumItems(&webPostQueue)) {
             pxtSleep(milliseconds, 25);
         }
@@ -605,18 +614,21 @@ static void * wow_post_thread(void * pParms) {
             dewPointF = (tr->dewPoint * 1.8) + 32;
             pressureInHg = (tr->normalisedPressure) * HPA_TO_INHG;
 
+            lgLogDebug("Preparing to POST to WoW service");
+            lgLogDebug("Base URL: %s", baseURL);
+            lgLogDebug("Site ID: %s", siteID);
+            lgLogDebug("Software ID: %s", softwareType);
+
             windDegrees = getWindDir(tr->windDirection);
 
             sprintf(
                 szURL, 
                 "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
-                cfgGetValue("wow.baseurl"),
-                cfgGetValue("wow.siteid"),
-                cfgGetValue("wow.authkey"),
+                baseURL,
+                siteID,
+                authKey,
                 getEncodedDate(),
-                cfgGetValue("wow.softwareid"));
-
-            strcat(szURL, "&tempf=");
+                softwareType);
 
             sprintf(
                 &szURL[strlen(szURL)],
@@ -628,6 +640,7 @@ static void * wow_post_thread(void * pParms) {
                 tr->windspeed,
                 tr->gustSpeed,
                 windDegrees);
+
 
             lgLogInfo("Posting to URL: %s", szURL);
 
