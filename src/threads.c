@@ -30,6 +30,13 @@ const char *    dir_ordinal[16] = {
                     "NE", "WSW", "SW", "NNW", 
                     "N", "NWN", "NW", "W"};
 
+const float     dir_degrees[16] = {
+                    112.5,  67.5,  90.0, 157.5,
+                    135.0, 202.5, 180.0,  22.5,
+                     45.0, 247.5, 225.0, 337.5,
+                      0.0, 292.5, 315.0, 270.0
+};
+
 const uint16_t  dir_adc_max[16] = {
                     63,   82,   91,  128,
                    196,  274,  336,  538,
@@ -48,6 +55,8 @@ const uint16_t  dir_adc_max[16] = {
 #define TEMPERATURE_CELCIUS_FACTOR  0.0078125f
 #define HUMIDITY_RH_FACTOR          0.0019074f
 
+#define HPA_TO_INHG                 0.02952998057228486f
+
 /*
 ** Each tip of the bucket in the rain gauge equates
 ** to 0.2794mm of rainfall, so just multiply this
@@ -56,9 +65,10 @@ const uint16_t  dir_adc_max[16] = {
 #define RAIN_GAUGE_MM               0.2794f
 
 static que_handle_t             dbq;
+static que_handle_t             webPostQueue;
 static pxt_handle_t             nrfListenThread;
 static pxt_handle_t             dbUpdateThread;
-static pxt_handle_t             owmPostThread;
+static pxt_handle_t             wowPostThread;
 
 static char                     szDumpBuffer[1024];
 
@@ -255,6 +265,8 @@ static void * NRF_listen_thread(void * pParms) {
     watchdog_packet_t   wdPkt;
     weather_transform_t tr;
     que_item_t          qItem;
+    que_item_t          webPostItem;
+    int                 msgCounter = 0;
 
     nrf_p nrf = getNRFReference();
 
@@ -299,6 +311,17 @@ static void * NRF_listen_thread(void * pParms) {
                     memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
                     _transformWeatherPacket(&tr, &pkt);
+
+                    msgCounter++;
+
+                    if (msgCounter == 10) {
+                        webPostItem.item = &tr;
+                        webPostItem.itemLength = sizeof(weather_transform_t);
+
+                        qPutItem(&webPostQueue, webPostItem);
+
+                        msgCounter = 0;
+                    }
 
                     qItem.item = &tr;
                     qItem.itemLength = sizeof(weather_transform_t);
@@ -491,8 +514,138 @@ static void * db_update_thread(void * pParms) {
     return NULL;
 }
 
-static void * owm_post_thread(void * pParms) {
+static char * getEncodedDate(void) {
+    char            buffer[20];
+    char *          outputBuffer;
+    int             i;
+    int             j = 0;
+    char            ch;
+
+    outputBuffer = (char *)malloc(32);
+
+    tmGetSimpleTimeStamp(buffer, 20);
+
+    for (i = 0;i < 20;i++) {
+        ch = buffer[i];
+
+        if (ch == ' ') {
+            outputBuffer[j] = '+';
+
+            j++;
+            i++;
+        }
+        else if (ch == ':') {
+            strcpy(outputBuffer, "%3A");
+            j += 3;
+            i++;
+        }
+        else {
+            outputBuffer[j++] = ch;
+        }
+    }
+    outputBuffer[j] = 0;
+
+    return outputBuffer;
+}
+
+static float getWindDir(const char * windOrdinal) {
+    int         i;
+
+    for (i = 0;i < 16;i++) {
+        if (strcmp(dir_ordinal[i], windOrdinal) == 0) {
+            return dir_degrees[i];
+        }
+    }
+
+    return 0.0;
+} 
+
+size_t CurlWrite_CallbackFunc(void * contents, size_t size, size_t nmemb, char * s)
+{
+    size_t newLength = size * nmemb;
+
+    strcat(s, (char*)contents);
+
+    return newLength;
+}
+
+static void * wow_post_thread(void * pParms) {
+    float                   tempF;
+    float                   dewPointF;
+    float                   pressureInHg;
+    float                   windDegrees;
+    que_item_t              item;
+    weather_transform_t *   tr;
+    CURL *                  pCurl;
+	CURLcode			    result;
+    char                    szCurlError[CURL_ERROR_SIZE];
+    char                    szURL[1024];
+    char                    szResponse[256];
+
     while (true) {
+        pCurl = curl_easy_init();
+
+        if (pCurl == NULL) {
+            curl_easy_cleanup(pCurl);
+            lgLogError("Failed to initialise curl");
+            break;
+        }
+
+        curl_easy_setopt(pCurl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+        curl_easy_setopt(pCurl, CURLOPT_ERRORBUFFER, szCurlError);
+
+        while (!qGetNumItems(&webPostQueue)) {
+            pxtSleep(milliseconds, 25);
+        }
+
+        if (qGetItem(&webPostQueue, &item) != NULL) {
+            tr = (weather_transform_t *)item.item;
+
+            tempF = (tr->temperature * 1.8) + 32;
+            dewPointF = (tr->dewPoint * 1.8) + 32;
+            pressureInHg = (tr->normalisedPressure) * HPA_TO_INHG;
+
+            windDegrees = getWindDir(tr->windDirection);
+
+            sprintf(
+                szURL, 
+                "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
+                cfgGetValue("wow.baseurl"),
+                cfgGetValue("wow.siteid"),
+                cfgGetValue("wow.authkey"),
+                getEncodedDate(),
+                cfgGetValue("wow.softwareid"));
+
+            strcat(szURL, "&tempf=");
+
+            sprintf(
+                &szURL[strlen(szURL)],
+                "&tempf=%.2f&baromin=%.2f&humidity%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f&winddir=%.1f",
+                tempF,
+                pressureInHg,
+                tr->humidity,
+                dewPointF,
+                tr->windspeed,
+                tr->gustSpeed,
+                windDegrees);
+
+            lgLogInfo("Posting to URL: %s", szURL);
+
+            curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
+
+            curl_easy_setopt(pCurl, CURLOPT_POST, 1L);
+            curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
+            curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, CurlWrite_CallbackFunc);
+            curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
+
+            result = curl_easy_perform(pCurl);
+
+            if (result != CURLE_OK) {
+                lgLogError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
+                return NULL;
+            }
+        }
+
         pxtSleep(milliseconds, 250);
     }
 
@@ -501,6 +654,7 @@ static void * owm_post_thread(void * pParms) {
 
 void startThreads(void) {
     qInit(&dbq, 10U);
+    qInit(&webPostQueue, 10U);
 
     pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
     pxtStart(&nrfListenThread, NULL);
@@ -508,14 +662,15 @@ void startThreads(void) {
     pxtCreate(&dbUpdateThread, &db_update_thread, true);
     pxtStart(&dbUpdateThread, NULL);
 
-    pxtCreate(&owmPostThread, &owm_post_thread, true);
-    pxtStart(&owmPostThread, NULL);
+    pxtCreate(&wowPostThread, &wow_post_thread, true);
+    pxtStart(&wowPostThread, NULL);
 }
 
 void stopThreads(void) {
     pxtStop(&dbUpdateThread);
     pxtStop(&nrfListenThread);
-    pxtStop(&owmPostThread);
+    pxtStop(&wowPostThread);
 
+    qDestroy(&webPostQueue);
     qDestroy(&dbq);
 }
