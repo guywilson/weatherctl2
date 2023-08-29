@@ -202,9 +202,6 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                 ANEMOMETER_METRES_PER_SEC * 
                 anemometerFactor;
 
-    lgLogStatus("Wind speed (m/s): %.2f", target->windSpeedms);
-    lgLogStatus("Wind gust (m/s): %.2f", target->gustSpeedms);
-
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
 
     target->windDirection = "SSE";
@@ -269,6 +266,7 @@ static void * NRF_listen_thread(void * pParms) {
     que_item_t          qItem;
     que_item_t          webPostItem;
     int                 msgCounter = 0;
+    int                 postCycleSeconds;
 
     nrf_p nrf = getNRFReference();
 
@@ -298,6 +296,8 @@ static void * NRF_listen_thread(void * pParms) {
 
     lgLogInfo("Read station ID from config as: 0x%08X", stationID);
 
+    postCycleSeconds = cfgGetValueAsInteger("wow.postcycletime");
+
     while (true) {
         while (NRF_data_ready(nrf)) {
             NRF_get_payload(nrf, rxBuffer);
@@ -314,9 +314,9 @@ static void * NRF_listen_thread(void * pParms) {
 
                     _transformWeatherPacket(&tr, &pkt);
 
-                    msgCounter++;
+                    msgCounter += 30;
 
-                    if (msgCounter == 10) {
+                    if (msgCounter == postCycleSeconds) {
                         webPostItem.item = &tr;
                         webPostItem.itemLength = sizeof(weather_transform_t);
 
@@ -539,36 +539,6 @@ static char * getEncodedTimeStamp(void) {
 
 	return pszTimeBuffer;
 }
-
-// static char * getEncodedDate(void) {
-//     char            buffer[20];
-//     char *          outputBuffer;
-//     int             i;
-//     int             j = 0;
-//     char            ch;
-
-//     outputBuffer = (char *)malloc(32);
-
-//     tmGetSimpleTimeStamp(buffer, 20);
-
-//     for (i = 0;i < 20;i++) {
-//         ch = buffer[i];
-
-//         if (ch == ' ') {
-//             outputBuffer[j++] = '+';
-//         }
-//         else if (ch == ':') {
-//             strcpy(&outputBuffer[j], "%3A");
-//             j += 3;
-//         }
-//         else {
-//             outputBuffer[j++] = ch;
-//         }
-//     }
-//     outputBuffer[j] = 0;
-
-//     return outputBuffer;
-// }
 
 static float getWindDir(const char * windOrdinal) {
     int         i;
