@@ -630,10 +630,10 @@ static void * wow_post_thread(void * pParms) {
 
             sprintf(
                 &szURL[strlen(szURL)],
-                "&tempf=%.2f&baromin=%.2f&humidity%d&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f&winddir=%.1f",
+                "&tempf=%.2f&baromin=%.2f&humidity=%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f&winddir=%.1f",
                 tempF,
                 pressureInHg,
-                (int)tr->humidity,
+                tr->humidity,
                 dewPointF,
                 tr->windspeed,
                 tr->gustSpeed,
