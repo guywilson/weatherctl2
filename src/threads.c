@@ -74,6 +74,12 @@ static pxt_handle_t             wowPostThread;
 
 static char                     szDumpBuffer[1024];
 
+typedef struct {
+    char *      response;
+    size_t      length;
+}
+curl_chunk_t;
+
 static uint8_t _getPacketType(char * packet) {
     return (uint8_t)packet[0];
 }
@@ -552,11 +558,24 @@ static float getWindDir(const char * windOrdinal) {
     return 0.0;
 } 
 
-size_t CurlWrite_CallbackFunc(void * contents, size_t size, size_t nmemb, char * s)
+size_t CurlWrite_CallbackFunc(void * contents, size_t size, size_t nmemb, void * p)
 {
-    size_t newLength = size * nmemb;
+    curl_chunk_t *      pChunk = (curl_chunk_t *)p;
+    size_t              newLength =  size * nmemb;
+    char *              s;
 
-    strcat(s, (char*)contents);
+    s = (char *)realloc(pChunk->response, (pChunk->length + newLength + 1));
+
+    if (s == NULL) {
+        return 0;
+    }
+
+    pChunk->response = s;
+
+    memcpy(&pChunk->response[pChunk->length], contents, newLength);
+    pChunk->length += newLength;
+
+    pChunk->response[pChunk->length] = 0;
 
     return newLength;
 }
@@ -572,12 +591,15 @@ static void * wow_post_thread(void * pParms) {
 	CURLcode			    result;
     char                    szCurlError[CURL_ERROR_SIZE];
     char                    szURL[1024];
-    char                    szResponse[256];
+    curl_chunk_t            chunk;
     char *                  encodedDate;
     const char *            baseURL;
     const char *            siteID;
     const char *            authKey;
     const char *            softwareType;
+
+    chunk.length = 0;
+    chunk.response = NULL;
 
     while (true) {
         pCurl = curl_easy_init();
@@ -647,7 +669,7 @@ static void * wow_post_thread(void * pParms) {
                 curl_easy_setopt(pCurl, CURLOPT_HTTPGET, 1L);
                 curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
                 curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &CurlWrite_CallbackFunc);
-                curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, szResponse);
+                curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &chunk);
 
                 result = curl_easy_perform(pCurl);
 
@@ -656,7 +678,7 @@ static void * wow_post_thread(void * pParms) {
                     return NULL;
                 }
 
-                lgLogInfo("WoW service responded: %s", szResponse);
+                lgLogInfo("WoW service responded: %s", chunk.response);
             }
             else {
                 lgLogInfo("Posting disbaled by config - do nothing");
