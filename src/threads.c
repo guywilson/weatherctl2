@@ -116,7 +116,7 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
     return adjustedPressure;
 }
 
-static float inline _computeTemperature(uint16_t rawTemperature) {
+static float inline _computeTemperature(int16_t rawTemperature) {
     return (float)rawTemperature * TEMPERATURE_CELCIUS_FACTOR;
 }
 
