@@ -29,6 +29,7 @@ daily_summary_t;
 const char * pszWeatherInsertStmt = 
 "INSERT INTO weather_data (\
 created, \
+packet_num, \
 temperature, \
 dew_point, \
 actual_pressure, \
@@ -42,6 +43,7 @@ wind_gust, \
 wind_direction) \
 values (\
 '%s', \
+%d, \
 %.2f, \
 %.2f, \
 %.2f, \
@@ -57,11 +59,13 @@ values (\
 const char * pszTelemetryInsertStmt = 
 "INSERT INTO telemetry_data (\
 created, \
+packet_num, \
 battery_voltage, \
 battery_percentage, \
 status_bits) \
 values (\
 '%s', \
+%d, \
 %.2f, \
 %.2f, \
 %d);";

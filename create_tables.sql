@@ -1,6 +1,7 @@
 CREATE TABLE weather_data (
     id SERIAL PRIMARY KEY,
     created TIMESTAMP NOT NULL,
+    packet_num INTEGER,
     temperature NUMERIC(5,2),
     dew_point NUMERIC(5,2),
     actual_pressure NUMERIC(6,2),
@@ -17,6 +18,7 @@ CREATE TABLE weather_data (
 CREATE TABLE telemetry_data (
     id SERIAL PRIMARY KEY,
     created TIMESTAMP NOT NULL,
+    packet_num INTEGER,
     battery_voltage NUMERIC(3,2),
     battery_percentage NUMERIC (5,2),
     status_bits INTEGER

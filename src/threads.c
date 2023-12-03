@@ -148,6 +148,9 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     int         i;
     float       anemometerFactor;
 
+    memcpy(&target->packetNum, source->packetNum, 3);
+    target->packetNum &= 0x00FFFFFF;
+
     lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
 
@@ -337,6 +340,7 @@ static void * NRF_listen_thread(void * pParms) {
                     qPutItem(&dbq, qItem);
 
                     lgLogDebug("Got weather data:");
+                    lgLogDebug("\tPacket num:  %u", pkt.packetNum);
                     lgLogDebug("\tStatus:      0x%04X", pkt.status);
                     lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
@@ -433,6 +437,7 @@ static void * db_update_thread(void * pParms) {
                 szInsertStr,
                 pszWeatherInsertStmt,
                 timestamp,
+                (int32_t)tr->packetNum,
                 tr->temperature,
                 tr->dewPoint,
                 tr->actualPressure,
@@ -456,6 +461,7 @@ static void * db_update_thread(void * pParms) {
                 szInsertStr,
                 pszTelemetryInsertStmt,
                 timestamp,
+                (int32_t)tr->packetNum,
                 tr->batteryVoltage,
                 tr->batteryPercentage,
                 tr->status_bits
