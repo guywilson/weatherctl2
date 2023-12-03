@@ -148,7 +148,8 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     int         i;
     float       anemometerFactor;
 
-    memcpy(&target->packetNum, source->packetNum, 3);
+    target->packetNum = 0;
+    target->packetNum = ((uint32_t)source->packetNum[2] << 16) | ((uint32_t)source->packetNum[1] << 8) | ((uint32_t)source->packetNum[0]);
     target->packetNum &= 0x00FFFFFF;
 
     lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
