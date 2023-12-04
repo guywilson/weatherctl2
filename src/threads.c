@@ -341,7 +341,7 @@ static void * NRF_listen_thread(void * pParms) {
                     qPutItem(&dbq, qItem);
 
                     lgLogDebug("Got weather data:");
-                    lgLogDebug("\tPacket num:  %u", pkt.packetNum);
+                    lgLogDebug("\tPacket num:  %u", tr.packetNum);
                     lgLogDebug("\tStatus:      0x%04X", pkt.status);
                     lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
