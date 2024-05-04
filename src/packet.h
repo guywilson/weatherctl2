@@ -17,16 +17,18 @@ typedef struct {                                    // O/S  - Description
 
     uint8_t             packetNum[3];               // 0x01 - Packet number (24-bit)
 
-    uint16_t            status;                     // 0x04 - Status bits
+    uint8_t             status;                     // 0x04 - Status bits
 
-    uint16_t            rawWindDir;                 // 0x06 - Raw ADC wind direction
+    uint8_t             rawBatteryPercentage;       // 0x05 - Raw I2C value for battery %
+    uint16_t            rawBatteryChargeRate;       // 0x06 - Raw I2C battery charge rate
+    uint16_t            rawBatteryVolts;            // 0x08 - Raw I2C value for battery V
 
-    int16_t             rawTemperature;             // 0x08 - Raw I2C TMP117 value
-    uint32_t            rawICPPressure;             // 0x0A - Raw pressure from icp10125
-    uint16_t            rawHumidity;                // 0x0E - Raw I2C SHT4x value
-    uint8_t             rawALS_UV[6];               // 0x10 - Raw I2C LTR390 ALS & UV value
-    uint16_t            rawBatteryVolts;            // 0x16 - Raw I2C value for battery V
-    uint16_t            rawBatteryPercentage;       // 0x18 - Raw I2C value for battery %
+    uint16_t            rawWindDir;                 // 0x0A - Raw ADC wind direction
+
+    int16_t             rawTemperature;             // 0x0C - Raw I2C TMP117 value
+    uint32_t            rawICPPressure;             // 0x0E - Raw pressure from icp10125
+    uint16_t            rawHumidity;                // 0x12 - Raw I2C SHT4x value
+    uint8_t             rawALS_UV[6];               // 0x14 - Raw I2C LTR390 ALS & UV value
 
     uint16_t            rawRainfall;                // 0x1A - Raw rain sensor count
     uint16_t            rawWindspeed;               // 0x1C - Raw wind speed
