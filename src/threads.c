@@ -154,9 +154,11 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
     lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
+    lgLogDebug("Raw battery charge rate: %u", (uint32_t)source->rawBatteryChargeRate);
 
-    target->batteryVoltage = (float)source->rawBatteryVolts / 1000.0;
-    target->batteryPercentage = (float)source->rawBatteryPercentage / 10.0;    
+    target->batteryVoltage = (float)source->rawBatteryVolts * 178.125f / 1000000.0f;
+    target->batteryPercentage = (float)source->rawBatteryPercentage;
+    target->batteryChargeRate = (float)source->rawBatteryChargeRate * 0.208f;
 
     target->status_bits = (int32_t)(source->status & 0x0000FFFF);
 
@@ -345,6 +347,7 @@ static void * NRF_listen_thread(void * pParms) {
                     lgLogDebug("\tStatus:      0x%04X", pkt.status);
                     lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
                     lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
+                    lgLogDebug("\tBat. crate:  %.2f", tr.batteryChargeRate);
                     lgLogDebug("\tTemperature: %.2f", tr.temperature);
                     lgLogDebug("\tDew point:   %.2f", tr.dewPoint);
                     lgLogDebug("\tAdj pressure:%.2f", tr.normalisedPressure);

@@ -71,6 +71,7 @@ typedef struct {
     
     float               batteryVoltage;
     float               batteryPercentage;
+    float               batteryChargeRate;
     float               batteryTemperature;
     int32_t             status_bits;
 
