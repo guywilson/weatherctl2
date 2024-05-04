@@ -156,7 +156,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
     lgLogDebug("Raw battery charge rate: %u", (uint32_t)source->rawBatteryChargeRate);
 
-    target->batteryVoltage = (float)source->rawBatteryVolts * 178.125f / 1000000.0f;
+    target->batteryVoltage = (float)source->rawBatteryVolts * 78.125f / 1000000.0f;
     target->batteryPercentage = (float)source->rawBatteryPercentage;
     target->batteryChargeRate = (float)source->rawBatteryChargeRate * 0.208f;
 
