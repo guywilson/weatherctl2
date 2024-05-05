@@ -62,10 +62,12 @@ created, \
 packet_num, \
 battery_voltage, \
 battery_percentage, \
+battery_crate, \
 status_bits) \
 values (\
 '%s', \
 %d, \
+%.2f, \
 %.2f, \
 %.2f, \
 %d);";

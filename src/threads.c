@@ -160,7 +160,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     target->batteryPercentage = (float)source->rawBatteryPercentage;
     target->batteryChargeRate = (float)source->rawBatteryChargeRate * 0.208f;
 
-    target->status_bits = (int32_t)(source->status & 0x0000FFFF);
+    target->status_bits = (int32_t)(source->status & 0x000000FF);
 
     lgLogDebug("Raw temperature: %d", (int)source->rawTemperature);
 
@@ -468,6 +468,7 @@ static void * db_update_thread(void * pParms) {
                 (int32_t)tr->packetNum,
                 tr->batteryVoltage,
                 tr->batteryPercentage,
+                tr->batteryChargeRate,
                 tr->status_bits
             );
 
