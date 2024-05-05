@@ -20,7 +20,7 @@ typedef struct {                                    // O/S  - Description
     uint8_t             status;                     // 0x04 - Status bits
 
     uint8_t             rawBatteryPercentage;       // 0x05 - Raw I2C value for battery %
-    uint16_t            rawBatteryChargeRate;       // 0x06 - Raw I2C battery charge rate
+    int16_t             rawBatteryChargeRate;       // 0x06 - Raw I2C battery charge rate
     uint16_t            rawBatteryVolts;            // 0x08 - Raw I2C value for battery V
 
     uint16_t            rawWindDir;                 // 0x0A - Raw ADC wind direction
