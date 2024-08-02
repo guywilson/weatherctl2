@@ -25,9 +25,8 @@ void printUsage(void) {
 	printf("  Options:\n");
 	printf("   -h/?             Print this help\n");
 	printf("   -version         Print the program version\n");
-	printf("   -port device     Serial port device\n");
-	printf("   -baud baudrate   Serial port baud rate\n");
 	printf("   -cfg configfile  Specify the cfg file, default is ./webconfig.cfg\n");
+    printf("   --dump-config    Dump the config contents and exit\n");
 	printf("   -d               Daemonise this application\n");
 	printf("   -log  filename   Write logs to the file\n");
 	printf("\n");
