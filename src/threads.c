@@ -145,7 +145,6 @@ static float _computeDewPoint(uint16_t rawTemperature, uint16_t rawHumidity) {
 }
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
-    int         i;
     float       anemometerFactor;
 
     target->packetNum = 0;
@@ -188,9 +187,6 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
     target->normalisedPressure = _getAltitudeAdjustedPressure(source->rawICPPressure);
     target->actualPressure = (float)source->rawICPPressure / 100.0f;
 
-    target->lux = computeLux(source->rawALS_UV);
-    target->uvIndex = computeUVI(source->rawALS_UV);
-
     lgLogDebug("Raw windspeed: %u", (uint32_t)source->rawWindspeed);
     lgLogDebug("Raw rainfall: %u", (uint32_t)source->rawRainfall);
 
@@ -215,18 +211,6 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                 anemometerFactor;
 
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
-
-    target->windDirection = "SSE";
-
-    /*
-    ** Find wind direction...
-    */
-    for (i = 0;i < 16;i++) {
-        if (source->rawWindDir < dir_adc_max[i]) {
-            target->windDirection = dir_ordinal[i];
-            break;
-        }
-    }
 }
 
 static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
@@ -364,8 +348,6 @@ static void * NRF_listen_thread(void * pParms) {
                     memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
 
                     pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
-
-                    memcpy(pkt.rawALS_UV, sleepPkt.rawALS_UV, 5);
 
                     _transformWeatherPacket(&tr, &pkt);
 
