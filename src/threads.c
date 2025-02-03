@@ -24,25 +24,6 @@
 
 #include "sql.h"
 
-const char *    dir_ordinal[16] = {
-                    "ESE", "ENE", "E", "SSE", 
-                    "SE", "SSW", "S", "NNE", 
-                    "NE", "WSW", "SW", "NNW", 
-                    "N", "NWN", "NW", "W"};
-
-const float     dir_degrees[16] = {
-                    112.5,  67.5,  90.0, 157.5,
-                    135.0, 202.5, 180.0,  22.5,
-                     45.0, 247.5, 225.0, 337.5,
-                      0.0, 292.5, 315.0, 270.0
-};
-
-const uint16_t  dir_adc_max[16] = {
-                    63,   82,   91,  128,
-                   196,  274,  336,  538,
-                   651, 1013, 1113, 1392,
-                  1808, 2071, 2542, 3149};
-
 /*
 ** Wind speed in mph:
 */
@@ -235,10 +216,6 @@ static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
         ds->min_humidity = tr->humidity;
     }
 
-    if (tr->lux > ds->max_lux) {
-        ds->max_lux = tr->lux;
-    }
-
     if (tr->windspeed > ds->max_wind_speed) {
         ds->max_wind_speed = tr->windspeed;
     }
@@ -337,8 +314,6 @@ static void * NRF_listen_thread(void * pParms) {
                     lgLogDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
                     lgLogDebug("\tAct pressure:%.2f", tr.actualPressure);
                     lgLogDebug("\tHumidity:    %d%%", (int)tr.humidity);
-                    lgLogDebug("\tLux:         %.2f", tr.lux);
-                    lgLogDebug("\tUV Index:    %.1f", tr.uvIndex);
                     lgLogDebug("\tWind speed:  %.2f", tr.windspeed);
                     lgLogDebug("\tWind gust:   %.2f", tr.gustSpeed);
                     lgLogDebug("\tRainfall:    %.2f", tr.rainfall);
@@ -354,7 +329,6 @@ static void * NRF_listen_thread(void * pParms) {
                     lgLogStatus("Got sleep packet:");
                     lgLogStatus("\tStatus:      0x%08X", sleepPkt.status);
                     lgLogStatus("\tBat. volts:  %.2f", tr.batteryVoltage);
-                    lgLogStatus("\tLux:         %.2f", tr.lux);
                     lgLogStatus("\tSleep for:   %d", (int)sleepPkt.sleepHours);
                     break;
 
@@ -429,8 +403,6 @@ static void * db_update_thread(void * pParms) {
                 tr->actualPressure,
                 tr->normalisedPressure,
                 tr->humidity,
-                tr->lux,
-                tr->uvIndex,
                 tr->rainfall,
                 tr->windspeed,
                 tr->gustSpeed
@@ -486,7 +458,6 @@ static void * db_update_thread(void * pParms) {
                     ds.max_pressure,
                     ds.min_humidity,
                     ds.max_humidity,
-                    ds.max_lux,
                     ds.total_rainfall,
                     ds.max_wind_speed,
                     ds.max_wind_gust
@@ -538,18 +509,6 @@ static char * getEncodedTimeStamp(void) {
 	return pszTimeBuffer;
 }
 
-static float getWindDir(const char * windOrdinal) {
-    int         i;
-
-    for (i = 0;i < 16;i++) {
-        if (strcmp(dir_ordinal[i], windOrdinal) == 0) {
-            return dir_degrees[i];
-        }
-    }
-
-    return 0.0;
-} 
-
 size_t CurlWrite_CallbackFunc(void * contents, size_t size, size_t nmemb, void * p)
 {
     curl_chunk_t *      pChunk = (curl_chunk_t *)p;
@@ -576,7 +535,6 @@ static void * wow_post_thread(void * pParms) {
     float                   tempF;
     float                   dewPointF;
     float                   pressureInHg;
-    float                   windDegrees;
     que_item_t              item;
     weather_transform_t *   tr;
     CURL *                  pCurl;
@@ -629,8 +587,6 @@ static void * wow_post_thread(void * pParms) {
 
             lgLogDebug("Preparing to POST to WoW service");
 
-            windDegrees = getWindDir(tr->windDirection);
-
             sprintf(
                 szURL, 
                 "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
@@ -644,14 +600,13 @@ static void * wow_post_thread(void * pParms) {
 
             sprintf(
                 &szURL[strlen(szURL)],
-                "&tempf=%.2f&baromin=%.2f&humidity=%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f&winddir=%.1f",
+                "&tempf=%.2f&baromin=%.2f&humidity=%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f",
                 tempF,
                 pressureInHg,
                 tr->humidity,
                 dewPointF,
                 tr->windspeed,
-                tr->gustSpeed,
-                windDegrees);
+                tr->gustSpeed);
 
             lgLogInfo("Posting to URL: %s", szURL);
 

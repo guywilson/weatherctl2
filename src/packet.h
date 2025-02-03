@@ -76,14 +76,11 @@ typedef struct {
     float               actualPressure;
     float               normalisedPressure;
     float               humidity;
-    float               lux;
-    float               uvIndex;
     float               rainfall;
     float               windspeed;
     float               gustSpeed;
     float               windSpeedms;
     float               gustSpeedms;
-    const char *        windDirection;
 }
 weather_transform_t;
 

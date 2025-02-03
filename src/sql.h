@@ -15,8 +15,6 @@ typedef struct {
     float           min_humidity;
     float           max_humidity;
     
-    float           max_lux;
-    
     float           total_rainfall;
     uint32_t        isHourAccountedBitmap;
     
@@ -35,16 +33,12 @@ dew_point, \
 actual_pressure, \
 pressure, \
 humidity, \
-lux, \
-uv_index, \
 rainfall, \
 wind_speed, \
 wind_gust) \
 values (\
 '%s', \
 %d, \
-%.2f, \
-%.2f, \
 %.2f, \
 %.2f, \
 %.2f, \
@@ -79,13 +73,11 @@ min_pressure, \
 max_pressure, \
 min_humidity, \
 max_humidity, \
-max_lux, \
 total_rainfall, \
 max_wind_speed, \
 max_wind_gust) \
 values (\
 '%s', \
-%.2f, \
 %.2f, \
 %.2f, \
 %.2f, \
