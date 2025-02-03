@@ -433,8 +433,7 @@ static void * db_update_thread(void * pParms) {
                 tr->uvIndex,
                 tr->rainfall,
                 tr->windspeed,
-                tr->gustSpeed,
-                tr->windDirection
+                tr->gustSpeed
             );
 
             dbExecute(wctlConnection, szInsertStr);

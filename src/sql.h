@@ -39,8 +39,7 @@ lux, \
 uv_index, \
 rainfall, \
 wind_speed, \
-wind_gust, \
-wind_direction) \
+wind_gust) \
 values (\
 '%s', \
 %d, \
@@ -53,8 +52,7 @@ values (\
 %.2f, \
 %.2f, \
 %.2f, \
-%.2f, \
-'%s');";
+%.2f);";
 
 const char * pszTelemetryInsertStmt = 
 "INSERT INTO telemetry_data (\
