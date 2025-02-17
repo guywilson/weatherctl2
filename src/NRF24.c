@@ -506,29 +506,36 @@ que_handle_t * getTxQueue(void) {
 }
 
 void setupNRF24L01(void) {
-    int                 dataRate;
+   const char * dataRateCfg = cfgGetValue("radio.baud");
 
-    dataRate = strcmp(
-                cfgGetValue(
-                    "radio.baud"), 
-                "2MHz") == 0 ? 
-                NRF24L01_RF_SETUP_DATA_RATE_2MBPS : 
-                NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
+   int dataRate;
+   if (strncmp(dataRateCfg, "2MHz", 4) == 0) {
+      dataRate = NRF24L01_RF_SETUP_DATA_RATE_2MBPS;
+   }
+   else if (strncmp(dataRateCfg, "1MHz", 4) == 0) {
+      dataRate = NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
+   }
+   else if (strncmp(dataRateCfg, "250KHz", 6) == 0) {
+      dataRate = NRF24L01_RF_SETUP_DATA_RATE_250KBPS;
+   }
+   else {
+      dataRate = NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
+   }
 
-	nrf.CE 				= NRF_SPI_CE_PIN;
-	nrf.spi_device 		= NRF_SPI_DEVICE;
-	nrf.spi_channel 	= NRF_SPI_CHANNEL;
-	nrf.spi_speed 		= NRF_SPI_FREQUENCY;
-	nrf.mode 			= NRF_RX;
-	nrf.channel 		= cfgGetValueAsInteger("radio.channel");
-	nrf.payload 		= NRF_MAX_PAYLOAD;
-    nrf.data_rate       = dataRate;
-    nrf.local_address   = cfgGetValue("radio.localaddress");
-    nrf.remote_address  = cfgGetValue("radio.remoteaddress");
-	nrf.pad 			= 32;
-	nrf.address_bytes 	= 5;
-	nrf.crc_bytes 		= 2;
-	nrf.PTX 			= 0;
+   nrf.CE 				   = NRF_SPI_CE_PIN;
+   nrf.spi_device 		= NRF_SPI_DEVICE;
+   nrf.spi_channel 	   = NRF_SPI_CHANNEL;
+   nrf.spi_speed 		   = NRF_SPI_FREQUENCY;
+   nrf.mode 			   = NRF_RX;
+   nrf.channel 		   = cfgGetValueAsInteger("radio.channel");
+   nrf.payload 		   = NRF_MAX_PAYLOAD;
+   nrf.data_rate        = dataRate;
+   nrf.local_address    = cfgGetValue("radio.localaddress");
+   nrf.remote_address   = cfgGetValue("radio.remoteaddress");
+   nrf.pad 			      = 32;
+   nrf.address_bytes 	= 5;
+   nrf.crc_bytes 		   = 2;
+   nrf.PTX 			      = 0;
 
-    qInit(getTxQueue(), 8U);
+   qInit(getTxQueue(), 8U);
 }
