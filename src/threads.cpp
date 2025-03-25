@@ -1,3 +1,6 @@
+#include <string>
+#include <queue>
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -14,15 +17,17 @@
 #include "logger.h"
 #include "cfgmgr.h"
 #include "posixthread.h"
-#include "timeutils.h"
 #include "psql.h"
-#include "que.h"
-#include "ltr390.h"
 #include "utils.h"
 #include "packet.h"
 #include "threads.h"
 
 #include "sql.h"
+
+using namespace std;
+
+#define INSERT_STRING_LEN           512
+#define URL_STRING_LEN             1024
 
 /*
 ** Wind speed in mph:
@@ -47,8 +52,9 @@
 */
 #define RAIN_GAUGE_MM               0.2794f
 
-static que_handle_t             dbq;
-static que_handle_t             webPostQueue;
+static queue<weather_transform_t> dbq;
+static queue<weather_transform_t> webPostQueue;
+
 static pxt_handle_t             nrfListenThread;
 static pxt_handle_t             dbUpdateThread;
 static pxt_handle_t             wowPostThread;
@@ -66,9 +72,9 @@ static uint8_t _getPacketType(char * packet) {
 }
 
 static uint16_t _getExpectedChipID(void) {
-    uint16_t            chipID;
+    cfgmgr & cfg = cfgmgr::getInstance();
 
-    chipID = ((cfgGetValueAsLongUnsigned("radio.stationid") >> 12) & 0xFFFF);
+    uint16_t chipID = ((cfg.getValueAsLongUnsignedInteger("radio.stationid") >> 12) & 0xFFFF);
 
     return chipID;
 }
@@ -79,8 +85,10 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
     double              altitude;
     float               adjustedPressure;
 
+    cfgmgr & cfg = cfgmgr::getInstance();
+
     if (!isCalculated) {
-        altitude = strtod(cfgGetValue("calibration.altitude"), NULL);
+        altitude = cfg.getValueAsDouble("calibration.altitude");
 
         compensationFactor = pow(
                     ((double)1.0f - ((double)ALITUDE_COMP_FACTOR * altitude)), 
@@ -90,7 +98,9 @@ static float _getAltitudeAdjustedPressure(uint32_t rawPressure) {
         isCalculated = true;
     }
 
-    lgLogDebug("Altitude compensation factor: %.2f", compensationFactor);
+    logger & log = logger::getInstance();
+
+    log.logDebug("Altitude compensation factor: %.2f", compensationFactor);
 
     adjustedPressure = (float)((double)rawPressure / compensationFactor);
 
@@ -126,15 +136,15 @@ static float _computeDewPoint(uint16_t rawTemperature, uint16_t rawHumidity) {
 }
 
 static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
-    float       anemometerFactor;
-
     target->packetNum = 0;
     target->packetNum = ((uint32_t)source->packetNum[2] << 16) | ((uint32_t)source->packetNum[1] << 8) | ((uint32_t)source->packetNum[0]);
     target->packetNum &= 0x00FFFFFF;
 
-    lgLogDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
-    lgLogDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
-    lgLogDebug("Raw battery charge rate: %d", (int)source->rawBatteryChargeRate);
+    logger & log = logger::getInstance();
+
+    log.logDebug("Raw battery volts: %u", (uint32_t)source->rawBatteryVolts);
+    log.logDebug("Raw battery percentage: %u", (uint32_t)source->rawBatteryPercentage);
+    log.logDebug("Raw battery charge rate: %d", (int)source->rawBatteryChargeRate);
 
     target->batteryVoltage = (float)source->rawBatteryVolts * 78.125f / 1000000.0f;
     target->batteryPercentage = (float)source->rawBatteryPercentage;
@@ -142,7 +152,7 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->status_bits = (int32_t)(source->status & 0x000000FF);
 
-    lgLogDebug("Raw temperature: %d", (int)source->rawTemperature);
+    log.logDebug("Raw temperature: %d", (int)source->rawTemperature);
 
     /*
     ** TMP117 temperature
@@ -163,15 +173,17 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
 
     target->dewPoint = _computeDewPoint(source->rawTemperature, source->rawHumidity);
 
-    lgLogDebug("Raw ICP Pressure: %u", source->rawICPPressure);
+    log.logDebug("Raw ICP Pressure: %u", source->rawICPPressure);
 
     target->normalisedPressure = _getAltitudeAdjustedPressure(source->rawICPPressure);
     target->actualPressure = (float)source->rawICPPressure / 100.0f;
 
-    lgLogDebug("Raw windspeed: %u", (uint32_t)source->rawWindspeed);
-    lgLogDebug("Raw rainfall: %u", (uint32_t)source->rawRainfall);
+    log.logDebug("Raw windspeed: %u", (uint32_t)source->rawWindspeed);
+    log.logDebug("Raw rainfall: %u", (uint32_t)source->rawRainfall);
 
-    anemometerFactor = strtof(cfgGetValue("calibration.anemometerfactor"), NULL);
+    cfgmgr & cfg = cfgmgr::getInstance();
+
+    float anemometerFactor = (float)cfg.getValueAsDouble("calibration.anemometerfactor");
 
     target->windspeed = 
                 (float)source->rawWindspeed * 
@@ -229,21 +241,20 @@ static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
 
 static void * NRF_listen_thread(void * pParms) {
     int                 rtn;
-    uint16_t            stationID;
     char                rxBuffer[64];
     uint8_t             packetID;
     weather_packet_t    pkt;
     sleep_packet_t      sleepPkt;
     watchdog_packet_t   wdPkt;
     weather_transform_t tr;
-    que_item_t          qItem;
-    que_item_t          webPostItem;
     int                 msgCounter = 0;
-    int                 postCycleSeconds;
 
     nrf_p nrf = getNRFReference();
 
-    lgLogInfo("Opening NRF24L01 device");
+    logger & log = logger::getInstance();
+    cfgmgr & cfg = cfgmgr::getInstance();
+
+    log.logInfo("Opening NRF24L01 device");
 
     NRF_init(nrf);
 
@@ -253,30 +264,30 @@ static void * NRF_listen_thread(void * pParms) {
 	rtn = NRF_read_register(nrf, NRF24L01_REG_CONFIG, rxBuffer, 1);
 
     if (rtn < 0) {
-        lgLogError("Failed to transfer SPI data: %s\n", lguErrorText(rtn));
+        log.logError("Failed to transfer SPI data: %s\n", lguErrorText(rtn));
 
         return NULL;
     }
 
-    lgLogInfo("Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
+    log.logInfo("Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
 
     if (rxBuffer[0] == 0x00) {
-        lgLogError("Config read back as 0x00, device is probably not plugged in?\n\n");
+        log.logError("Config read back as 0x00, device is probably not plugged in?\n\n");
         return NULL;
     }
 
-    stationID = _getExpectedChipID();
+    uint16_t stationID = _getExpectedChipID();
 
-    lgLogInfo("Read station ID from config as: 0x%08X", stationID);
+    log.logInfo("Read station ID from config as: 0x%08X", stationID);
 
-    postCycleSeconds = cfgGetValueAsInteger("wow.postcycletime");
+    int postCycleSeconds = cfg.getValueAsInteger("wow.postcycletime");
 
     while (true) {
         while (NRF_data_ready(nrf)) {
             NRF_get_payload(nrf, rxBuffer);
 
             if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
-                lgLogDebug("%s", szDumpBuffer);
+                log.logDebug("%s", szDumpBuffer);
             }
 
             packetID = _getPacketType(rxBuffer);
@@ -290,33 +301,27 @@ static void * NRF_listen_thread(void * pParms) {
                     msgCounter += 30;
 
                     if (msgCounter == postCycleSeconds) {
-                        webPostItem.item = &tr;
-                        webPostItem.itemLength = sizeof(weather_transform_t);
-
-                        qPutItem(&webPostQueue, webPostItem);
+                        webPostQueue.push(tr);
 
                         msgCounter = 0;
                     }
 
-                    qItem.item = &tr;
-                    qItem.itemLength = sizeof(weather_transform_t);
+                    dbq.push(tr);
 
-                    qPutItem(&dbq, qItem);
-
-                    lgLogDebug("Got weather data:");
-                    lgLogDebug("\tPacket num:  %u", tr.packetNum);
-                    lgLogDebug("\tStatus:      0x%04X", pkt.status);
-                    lgLogDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
-                    lgLogDebug("\tBat. percent:%.2f", tr.batteryPercentage);
-                    lgLogDebug("\tBat. crate:  %.2f", tr.batteryChargeRate);
-                    lgLogDebug("\tTemperature: %.2f", tr.temperature);
-                    lgLogDebug("\tDew point:   %.2f", tr.dewPoint);
-                    lgLogDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
-                    lgLogDebug("\tAct pressure:%.2f", tr.actualPressure);
-                    lgLogDebug("\tHumidity:    %d%%", (int)tr.humidity);
-                    lgLogDebug("\tWind speed:  %.2f", tr.windspeed);
-                    lgLogDebug("\tWind gust:   %.2f", tr.gustSpeed);
-                    lgLogDebug("\tRainfall:    %.2f", tr.rainfall);
+                    log.logDebug("Got weather data:");
+                    log.logDebug("\tPacket num:  %u", tr.packetNum);
+                    log.logDebug("\tStatus:      0x%04X", pkt.status);
+                    log.logDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
+                    log.logDebug("\tBat. percent:%.2f", tr.batteryPercentage);
+                    log.logDebug("\tBat. crate:  %.2f", tr.batteryChargeRate);
+                    log.logDebug("\tTemperature: %.2f", tr.temperature);
+                    log.logDebug("\tDew point:   %.2f", tr.dewPoint);
+                    log.logDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
+                    log.logDebug("\tAct pressure:%.2f", tr.actualPressure);
+                    log.logDebug("\tHumidity:    %d%%", (int)tr.humidity);
+                    log.logDebug("\tWind speed:  %.2f", tr.windspeed);
+                    log.logDebug("\tWind gust:   %.2f", tr.gustSpeed);
+                    log.logDebug("\tRainfall:    %.2f", tr.rainfall);
                     break;
 
                 case PACKET_ID_SLEEP:
@@ -326,20 +331,20 @@ static void * NRF_listen_thread(void * pParms) {
 
                     _transformWeatherPacket(&tr, &pkt);
 
-                    lgLogStatus("Got sleep packet:");
-                    lgLogStatus("\tStatus:      0x%08X", sleepPkt.status);
-                    lgLogStatus("\tBat. volts:  %.2f", tr.batteryVoltage);
-                    lgLogStatus("\tSleep for:   %d", (int)sleepPkt.sleepHours);
+                    log.logStatus("Got sleep packet:");
+                    log.logStatus("\tStatus:      0x%08X", sleepPkt.status);
+                    log.logStatus("\tBat. volts:  %.2f", tr.batteryVoltage);
+                    log.logStatus("\tSleep for:   %d", (int)sleepPkt.sleepHours);
                     break;
 
                 case PACKET_ID_WATCHDOG:
                     memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
 
-                    lgLogStatus("Got watchdog packet");
+                    log.logStatus("Got watchdog packet");
                     break;
 
                 default:
-                    lgLogError("Undefined packet type received: ID[0x%02X]", packetID);
+                    log.logError("Undefined packet type received: ID[0x%02X]", packetID);
                     break;
             }
 
@@ -354,130 +359,128 @@ static void * NRF_listen_thread(void * pParms) {
 
 static void * db_update_thread(void * pParms) {
     PGconn *                wctlConnection;
-    que_item_t              item;
-    weather_transform_t *   tr;
+    weather_transform_t     tr;
     daily_summary_t         ds;
     bool                    isSummaryDone = false;
     int                     hour;
     int                     minute;
-    char                    szInsertStr[512];
-    char                    timestamp[TIMESTAMP_STR_LEN];
+    char                    szInsertStr[INSERT_STRING_LEN];
+
+    logger & log = logger::getInstance();
+    cfgmgr & cfg = cfgmgr::getInstance();
 
     memset(&ds, 0, sizeof(daily_summary_t));
 
     wctlConnection = dbConnect(
-            cfgGetValue("db.host"), 
-            cfgGetValueAsInteger("db.port"),
-            cfgGetValue("db.database"),
-            cfgGetValue("db.user"),
-            cfgGetValue("db.password"));
+            cfg.getValue("db.host").c_str(), 
+            cfg.getValueAsInteger("db.port"),
+            cfg.getValue("db.database").c_str(),
+            cfg.getValue("db.user").c_str(),
+            cfg.getValue("db.password").c_str());
 
     if (wctlConnection == NULL) {
-        lgLogError("Could not connect to database %s", cfgGetValue("db.database"));
+        log.logError("Could not connect to database %s", cfg.getValue("db.database").c_str());
         return NULL;
     }
 
     while (true) {
-        while (!qGetNumItems(&dbq)) {
+        while (dbq.empty()) {
             pxtSleep(milliseconds, 25);
         }
 
-        if (qGetItem(&dbq, &item) != NULL) {
-            tr = (weather_transform_t *)item.item;
+        tr = dbq.front();
+        dbq.pop();
 
-            lgLogDebug("Updating summary structure");
+        log.logDebug("Updating summary structure");
 
-            updateSummary(&ds, tr);
+        updateSummary(&ds, &tr);
 
-            tmGetSimpleTimeStamp(timestamp, TIMESTAMP_STR_LEN);
+        string timestamp = getTimestamp();
 
-            lgLogDebug("Inserting weather data");
+        log.logDebug("Inserting weather data");
 
-            sprintf(
-                szInsertStr,
-                pszWeatherInsertStmt,
-                timestamp,
-                (int32_t)tr->packetNum,
-                tr->temperature,
-                tr->dewPoint,
-                tr->actualPressure,
-                tr->normalisedPressure,
-                tr->humidity,
-                tr->rainfall,
-                tr->windspeed,
-                tr->gustSpeed
-            );
+        snprintf(
+            szInsertStr,
+            INSERT_STRING_LEN,
+            pszWeatherInsertStmt,
+            timestamp.c_str(),
+            (int32_t)tr.packetNum,
+            tr.temperature,
+            tr.dewPoint,
+            tr.actualPressure,
+            tr.normalisedPressure,
+            tr.humidity,
+            tr.rainfall,
+            tr.windspeed,
+            tr.gustSpeed
+        );
 
-            dbExecute(wctlConnection, szInsertStr);
+        dbExecute(wctlConnection, szInsertStr);
 
+        pxtSleep(milliseconds, 100);
+
+        log.logDebug("Inserting telemetry data");
+
+        snprintf(
+            szInsertStr,
+            INSERT_STRING_LEN,
+            pszTelemetryInsertStmt,
+            timestamp.c_str(),
+            (int32_t)tr.packetNum,
+            tr.batteryVoltage,
+            tr.batteryPercentage,
+            tr.batteryChargeRate,
+            tr.status_bits
+        );
+
+        dbExecute(wctlConnection, szInsertStr);
+
+        struct tm * localtime = getLocalTime();
+
+        hour = localtime->tm_hour;
+        minute = localtime->tm_min;
+
+        /*
+        ** On the stroke of midnight, write the daily_summary
+        ** and reset the summary values...
+        */
+        if (hour == 23 && minute == 59 && !isSummaryDone) {
             pxtSleep(milliseconds, 100);
 
-            lgLogDebug("Inserting telemetry data");
+            log.logDebug("Inserting daily summary");
 
-            sprintf(
+            string date = getTodaysDate();
+
+            snprintf(
                 szInsertStr,
-                pszTelemetryInsertStmt,
-                timestamp,
-                (int32_t)tr->packetNum,
-                tr->batteryVoltage,
-                tr->batteryPercentage,
-                tr->batteryChargeRate,
-                tr->status_bits
+                INSERT_STRING_LEN,
+                pszSummaryInsertStmt,
+                date.c_str(),
+                ds.min_temperature,
+                ds.max_temperature,
+                ds.min_pressure,
+                ds.max_pressure,
+                ds.min_humidity,
+                ds.max_humidity,
+                ds.total_rainfall,
+                ds.max_wind_speed,
+                ds.max_wind_gust
             );
 
             dbExecute(wctlConnection, szInsertStr);
 
-            tmUpdate();
-            
-            hour = tmGetHour();
-            minute = tmGetMinute();
+            memset(&ds, 0, sizeof(daily_summary_t));
 
-            /*
-            ** On the stroke of midnight, write the daily_summary
-            ** and reset the summary values...
-            */
-            if (hour == 23 && minute == 59 && !isSummaryDone) {
-                /*
-                ** We only want the date in the format
-                ** "YYYY-MM-DD" so truncate the timestamp
-                ** to just leave the date part...
-                */
-                timestamp[10] = 0;
-
-                pxtSleep(milliseconds, 100);
-
-                lgLogDebug("Inserting daily summary");
-
-                sprintf(
-                    szInsertStr,
-                    pszSummaryInsertStmt,
-                    timestamp,
-                    ds.min_temperature,
-                    ds.max_temperature,
-                    ds.min_pressure,
-                    ds.max_pressure,
-                    ds.min_humidity,
-                    ds.max_humidity,
-                    ds.total_rainfall,
-                    ds.max_wind_speed,
-                    ds.max_wind_gust
-                );
-
-                dbExecute(wctlConnection, szInsertStr);
-
-                memset(&ds, 0, sizeof(daily_summary_t));
-
-                isSummaryDone = true;
-            }
-            else if (hour == 1) {
-                /*
-                ** Once we've got to 1am, reset isSummaryDone flag...
-                */
-                isSummaryDone = false;
-            }
-
-            pxtSleep(milliseconds, 250);
+            isSummaryDone = true;
         }
+        else if (hour == 1) {
+            /*
+            ** Once we've got to 1am, reset isSummaryDone flag...
+            */
+            isSummaryDone = false;
+        }
+
+        pxtSleep(milliseconds, 250);
     }
 
     dbFinish(wctlConnection);
@@ -535,18 +538,16 @@ static void * wow_post_thread(void * pParms) {
     float                   tempF;
     float                   dewPointF;
     float                   pressureInHg;
-    que_item_t              item;
-    weather_transform_t *   tr;
+    weather_transform_t     tr;
     CURL *                  pCurl;
 	CURLcode			    result;
     char                    szCurlError[CURL_ERROR_SIZE];
     char                    szURL[1024];
     curl_chunk_t            chunk;
     char *                  encodedDate;
-    const char *            baseURL;
-    const char *            siteID;
-    const char *            authKey;
-    const char *            softwareType;
+
+    logger & log = logger::getInstance();
+    cfgmgr & cfg = cfgmgr::getInstance();
 
     chunk.length = 0;
     chunk.response = NULL;
@@ -556,80 +557,81 @@ static void * wow_post_thread(void * pParms) {
 
         if (pCurl == NULL) {
             curl_easy_cleanup(pCurl);
-            lgLogError("Failed to initialise curl");
+            log.logError("Failed to initialise curl");
             break;
         }
 
         curl_easy_setopt(pCurl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
         curl_easy_setopt(pCurl, CURLOPT_ERRORBUFFER, szCurlError);
 
-        baseURL = cfgGetValue("wow.baseurl");
-        siteID = cfgGetValue("wow.siteid");
-        authKey = cfgGetValue("wow.authkey");
-        softwareType = cfgGetValue("wow.softwareid");
+        string baseURL = cfg.getValue("wow.baseurl");
+        string siteID = cfg.getValue("wow.siteid");
+        string authKey = cfg.getValue("wow.authkey");
+        string softwareType = cfg.getValue("wow.softwareid");
 
-        lgLogDebug("Base URL: %s", baseURL);
-        lgLogDebug("Site ID: %s", siteID);
-        lgLogDebug("Software ID: %s", softwareType);
+        log.logDebug("Base URL: %s", baseURL.c_str());
+        log.logDebug("Site ID: %s", siteID.c_str());
+        log.logDebug("Software ID: %s", softwareType.c_str());
 
-        while (!qGetNumItems(&webPostQueue)) {
+        while (webPostQueue.empty()) {
             pxtSleep(milliseconds, 25);
         }
 
-        if (qGetItem(&webPostQueue, &item) != NULL) {
-            tr = (weather_transform_t *)item.item;
+        tr = webPostQueue.front();
+        webPostQueue.pop();
 
-            encodedDate = getEncodedTimeStamp();
+        encodedDate = getEncodedTimeStamp();
 
-            tempF = (tr->temperature * 1.8) + 32;
-            dewPointF = (tr->dewPoint * 1.8) + 32;
-            pressureInHg = (tr->normalisedPressure) * HPA_TO_INHG;
+        tempF = (tr.temperature * 1.8) + 32;
+        dewPointF = (tr.dewPoint * 1.8) + 32;
+        pressureInHg = (tr.normalisedPressure) * HPA_TO_INHG;
 
-            lgLogDebug("Preparing to POST to WoW service");
+        log.logDebug("Preparing to POST to WoW service");
 
-            sprintf(
-                szURL, 
-                "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
-                baseURL,
-                siteID,
-                authKey,
-                encodedDate,
-                softwareType);
+        snprintf(
+            szURL, 
+            URL_STRING_LEN,
+            "%s?siteid=%s&siteAuthenticationKey=%s&dateutc=%s&softwaretype=%s",
+            baseURL.c_str(),
+            siteID.c_str(),
+            authKey.c_str(),
+            encodedDate,
+            softwareType.c_str());
 
-            free(encodedDate);
+        free(encodedDate);
 
-            sprintf(
-                &szURL[strlen(szURL)],
-                "&tempf=%.2f&baromin=%.2f&humidity=%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f",
-                tempF,
-                pressureInHg,
-                tr->humidity,
-                dewPointF,
-                tr->windspeed,
-                tr->gustSpeed);
+        snprintf(
+            &szURL[strlen(szURL)],
+            (URL_STRING_LEN - strlen(szURL)),
+            "&tempf=%.2f&baromin=%.2f&humidity=%.2f&dewptf=%.2f&windspeedmph=%.2f&windgustmph=%.2f",
+            tempF,
+            pressureInHg,
+            tr.humidity,
+            dewPointF,
+            tr.windspeed,
+            tr.gustSpeed);
 
-            lgLogInfo("Posting to URL: %s", szURL);
+        log.logInfo("Posting to URL: %s", szURL);
 
-            if (cfgGetValueAsBoolean("wow.isenabled")) {
-                curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
+        if (cfg.getValueAsBoolean("wow.isenabled")) {
+            curl_easy_setopt(pCurl, CURLOPT_URL, szURL);
 
-                curl_easy_setopt(pCurl, CURLOPT_HTTPGET, 1L);
-                curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
-                curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &CurlWrite_CallbackFunc);
-                curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &chunk);
+            curl_easy_setopt(pCurl, CURLOPT_HTTPGET, 1L);
+            curl_easy_setopt(pCurl, CURLOPT_USERAGENT, "libcrp/0.1");
+            curl_easy_setopt(pCurl, CURLOPT_WRITEFUNCTION, &CurlWrite_CallbackFunc);
+            curl_easy_setopt(pCurl, CURLOPT_WRITEDATA, &chunk);
 
-                result = curl_easy_perform(pCurl);
+            result = curl_easy_perform(pCurl);
 
-                if (result != CURLE_OK) {
-                    lgLogError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
-                    return NULL;
-                }
-
-                lgLogInfo("WoW service responded: %s", chunk.response);
+            if (result != CURLE_OK) {
+                log.logError("Failed to post to %s - Curl error [%s]", szURL, szCurlError);
+                return NULL;
             }
-            else {
-                lgLogInfo("Posting disbaled by config - do nothing");
-            }
+
+            log.logInfo("WoW service responded: %s", chunk.response);
+        }
+        else {
+            log.logInfo("Posting disbaled by config - do nothing");
         }
 
         pxtSleep(milliseconds, 250);
@@ -639,9 +641,6 @@ static void * wow_post_thread(void * pParms) {
 }
 
 void startThreads(void) {
-    qInit(&dbq, 10U);
-    qInit(&webPostQueue, 10U);
-
     pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
     pxtStart(&nrfListenThread, NULL);
 
@@ -656,7 +655,4 @@ void stopThreads(void) {
     pxtStop(&dbUpdateThread);
     pxtStop(&nrfListenThread);
     pxtStop(&wowPostThread);
-
-    qDestroy(&webPostQueue);
-    qDestroy(&dbq);
 }

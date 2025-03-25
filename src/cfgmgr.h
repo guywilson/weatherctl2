@@ -1,17 +1,91 @@
-#include <stdbool.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <exception>
 
-#ifndef __INCL_CFGMGR
-#define __INCL_CFGMGR
+#include <limits.h>
 
-struct _cfg_handle_t;
-typedef struct _cfg_handle_t            cfg_handle_t;
+#include <stdint.h>
 
-int             cfgOpen(const char * pszConfigFileName);
-void            cfgClose(void);
-const char *    cfgGetValue(const char * key);
-bool            cfgGetValueAsBoolean(const char * key);
-int             cfgGetValueAsInteger(const char * key);
-int32_t         cfgGetValueAsLongInteger(const char * key);
-uint32_t        cfgGetValueAsLongUnsigned(const char * key);
-void            cfgDumpConfig(void);
+using namespace std;
+
+#ifndef _INCL_CONFIGMGR
+#define _INCL_CONFIGMGR
+
+class cfg_error : public exception {
+    private:
+        string message;
+        static const int MESSAGE_BUFFER_LEN = 4096;
+
+    public:
+        const char * getTitle() {
+            return "CFG Error: ";
+        }
+
+        cfg_error() {
+            this->message.assign(getTitle());
+        }
+
+        cfg_error(const char * msg) : cfg_error() {
+            this->message.append(msg);
+        }
+
+        cfg_error(const char * msg, const char * file, int line) : cfg_error() {
+            char lineNumBuf[8];
+
+            snprintf(lineNumBuf, 8, ":%d", line);
+
+            this->message.append(msg);
+            this->message.append(" at ");
+            this->message.append(file);
+            this->message.append(lineNumBuf);
+        }
+
+        virtual const char * what() const noexcept {
+            return this->message.c_str();
+        }
+
+        static char * buildMsg(const char * fmt, ...) {
+            va_list     args;
+            char *      buffer;
+
+            buffer = (char *)malloc(MESSAGE_BUFFER_LEN);
+            
+            va_start(args, fmt);
+            vsnprintf(buffer, MESSAGE_BUFFER_LEN, fmt, args);
+            va_end(args);
+
+            return buffer;
+        }
+};
+
+class cfgmgr {
+    public:
+        static cfgmgr & getInstance() {
+            static cfgmgr instance;
+            return instance;
+        }
+
+    private:
+        unordered_map<string, string> values;
+        bool isConfigured = false;
+
+        cfgmgr() {}
+
+    public:
+        ~cfgmgr() {}
+
+        void initialise(const string & configFileName);
+        void readConfig();
+
+        string getValue(const string & key);
+        bool getValueAsBoolean(const string & key);
+        int getValueAsInteger(const string & key);
+        int32_t getValueAsLongInteger(const string & key);
+        uint32_t getValueAsLongUnsignedInteger(const string & key);
+        double getValueAsDouble(const string & key);
+
+        void dumpConfig();
+};
+
 #endif

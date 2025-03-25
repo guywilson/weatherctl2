@@ -21,25 +21,29 @@ TARGET = wctl2
 # Tools
 VBUILD = vbuild
 C = gcc
-LINKER = gcc
+CPP = g++
+LINKER = g++
 
 # postcompile step
 PRECOMPILE = @ mkdir -p $(BUILD) $(DEP)
 # postcompile step
 POSTCOMPILE = @ mv -f $(DEP)/$*.Td $(DEP)/$*.d
 
-CFLAGS = -c -O2 -Wall -pedantic -I/Users/guy/Library/include
+CPPFLAGS = -c -O2 -Wall -pedantic -std=c++20
+CFLAGS = -c -O2 -Wall -pedantic
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEP)/$*.Td
 
 # Libraries
 STDLIBS = -pthread
-EXTLIBS = -lm -lcrypto -lpq -llgpio -lcurl -lstrutils
+EXTLIBS = -lm -lcrypto -lpq -llgpio -lcurl
 
+COMPILE.cpp = $(CPP) $(CPPFLAGS) $(DEPFLAGS) -o $@
 COMPILE.c = $(C) $(CFLAGS) $(DEPFLAGS) -o $@
 LINK.o = $(LINKER) $(STDLIBS) -o $@
 
 CSRCFILES = $(wildcard $(SOURCE)/*.c)
-OBJFILES = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(CSRCFILES))
+CPPSRCFILES = $(wildcard $(SOURCE)/*.cpp)
+OBJFILES = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(CSRCFILES)) $(patsubst $(SOURCE)/%.cpp, $(BUILD)/%.o, $(CPPSRCFILES))
 DEPFILES = $(patsubst $(SOURCE)/%.c, $(DEP)/%.d, $(CSRCFILES))
 
 all: $(TARGET)
@@ -53,6 +57,12 @@ $(BUILD)/%.o: $(SOURCE)/%.c
 $(BUILD)/%.o: $(SOURCE)/%.c $(DEP)/%.d
 	$(PRECOMPILE)
 	$(COMPILE.c) $<
+	$(POSTCOMPILE)
+
+$(BUILD)/%.o: $(SOURCE)/%.cpp
+$(BUILD)/%.o: $(SOURCE)/%.cpp $(DEP)/%.d
+	$(PRECOMPILE)
+	$(COMPILE.cpp) $<
 	$(POSTCOMPILE)
 
 .PRECIOUS = $(DEP)/%.d

@@ -8,11 +8,13 @@
 
 #include <lgpio.h>
 
+extern "C" {
 #include "version.h"
+}
+
 #include "cfgmgr.h"
 #include "logger.h"
 #include "posixthread.h"
-#include "timeutils.h"
 #include "nRF24L01.h"
 #include "NRF24.h"
 #include "threads.h"
@@ -33,41 +35,43 @@ void printUsage(void) {
 }
 
 void handleSignal(int sigNum) {
+	logger & log = logger::getInstance();
+
 	switch (sigNum) {
 		case SIGINT:
-			lgLogStatus("Detected SIGINT, cleaning up...");
+			log.logStatus("Detected SIGINT, cleaning up...");
 			break;
 
 		case SIGTERM:
-			lgLogStatus("Detected SIGTERM, cleaning up...");
+			log.logStatus("Detected SIGTERM, cleaning up...");
 			break;
 
 		case SIGUSR1:
 			/*
 			** We're interpreting this as a request to turn on/off debug logging...
 			*/
-			lgLogStatus("Detected SIGUSR1...");
+			log.logStatus("Detected SIGUSR1...");
 
-			if (lgCheckLogLevel(LOG_LEVEL_INFO)) {
-				int level = lgGetLogLevel();
+			if (log.isLogLevel(LOG_LEVEL_INFO)) {
+				int level = log.getLogLevel();
 				level &= ~LOG_LEVEL_INFO;
-				lgSetLogLevel(level);
+				log.setLogLevel(level);
 			}
 			else {
-				int level = lgGetLogLevel();
+				int level = log.getLogLevel();
 				level |= LOG_LEVEL_INFO;
-				lgSetLogLevel(level);
+				log.setLogLevel(level);
 			}
 
-			if (lgCheckLogLevel(LOG_LEVEL_DEBUG)) {
-				int level = lgGetLogLevel();
+			if (log.isLogLevel(LOG_LEVEL_DEBUG)) {
+				int level = log.getLogLevel();
 				level &= ~LOG_LEVEL_DEBUG;
-				lgSetLogLevel(level);
+				log.setLogLevel(level);
 			}
 			else {
-				int level = lgGetLogLevel();
+				int level = log.getLogLevel();
 				level |= LOG_LEVEL_DEBUG;
-				lgSetLogLevel(level);
+				log.setLogLevel(level);
 			}
 			return;
 	}
@@ -77,8 +81,7 @@ void handleSignal(int sigNum) {
     stopThreads();
     
     NRF_term(&nrf);
-    lgClose();
-    cfgClose();
+    log.closelogger();
 
     exit(0);
 }
@@ -87,13 +90,10 @@ int main(int argc, char ** argv) {
 	char *			    pszLogFileName = NULL;
 	char *			    pszConfigFileName = NULL;
 	int				    i;
-    int                 rtn;
 	bool			    isDaemonised = false;
 	bool			    isDumpConfig = false;
 	const char *	    defaultLoggingLevel = "LOG_LEVEL_INFO | LOG_LEVEL_ERROR | LOG_LEVEL_FATAL";
 
-    tmInitialiseUptimeClock();
-	
 	if (argc > 1) {
 		for (i = 1;i < argc;i++) {
 			if (argv[i][0] == '-') {
@@ -134,64 +134,72 @@ int main(int argc, char ** argv) {
 		daemonise();
 	}
 
-    rtn = cfgOpen(pszConfigFileName);
+	cfgmgr & cfg = cfgmgr::getInstance();
 
-    if (rtn) {
-		fprintf(stderr, "Could not read config file: '%s'\n", pszConfigFileName);
-		fprintf(stderr, "Aborting!\n\n");
-		fflush(stderr);
+	try {
+		cfg.initialise(pszConfigFileName);
+	}
+	catch (cfg_error & e) {
+		fprintf(stderr, "Could not open configuration file %s\n", pszConfigFileName);
 		exit(-1);
-    }
-	
+	}
+
 	if (pszConfigFileName != NULL) {
 		free(pszConfigFileName);
 	}
 
 	if (isDumpConfig) {
-        cfgDumpConfig();
-        cfgClose();
+        cfg.dumpConfig();
         return 0;
 	}
 
-	if (pszLogFileName != NULL) {
-        lgOpen(pszLogFileName, defaultLoggingLevel);
-		free(pszLogFileName);
-	}
-	else {
-		const char * filename = cfgGetValue("log.filename");
-		const char * level = cfgGetValue("log.level");
+	logger & log = logger::getInstance();
 
-		if (strlen(filename) == 0 && strlen(level) == 0) {
-			lgOpenStdout(defaultLoggingLevel);
-		}
-		else if (strlen(level) == 0) {
-            lgOpen(filename, defaultLoggingLevel);
+	try {
+		if (pszLogFileName != NULL) {
+			log.initlogger(pszLogFileName, defaultLoggingLevel);
+			free(pszLogFileName);
 		}
 		else {
-            lgOpen(filename, level);
+			string filename = cfg.getValue("log.filename");
+			string level = cfg.getValue("log.level");
+	
+			if (filename.length() == 0 && level.length() == 0) {
+				log.initlogger(defaultLoggingLevel);
+			}
+			else if (level.length() == 0) {
+				log.initlogger(filename, defaultLoggingLevel);
+			}
+			else {
+				log.initlogger(filename.c_str(), level.c_str());
+			}
 		}
+	}
+	catch (log_error & e) {
+		fprintf(stderr, "Could not initialise logger");
+		exit(-1);
 	}
 
 	/*
 	 * Register signal handler for cleanup...
 	 */
 	if (signal(SIGINT, &handleSignal) == SIG_ERR) {
-		lgLogFatal("Failed to register signal handler for SIGINT");
+		log.logFatal("Failed to register signal handler for SIGINT");
 		return -1;
 	}
 
 	if (signal(SIGTERM, &handleSignal) == SIG_ERR) {
-		lgLogFatal("Failed to register signal handler for SIGTERM");
+		log.logFatal("Failed to register signal handler for SIGTERM");
 		return -1;
 	}
 
 	if (signal(SIGUSR1, &handleSignal) == SIG_ERR) {
-		lgLogFatal("Failed to register signal handler for SIGUSR1");
+		log.logFatal("Failed to register signal handler for SIGUSR1");
 		return -1;
 	}
 
 	if (signal(SIGUSR2, &handleSignal) == SIG_ERR) {
-		lgLogFatal("Failed to register signal handler for SIGUSR2");
+		log.logFatal("Failed to register signal handler for SIGUSR2");
 		return -1;
 	}
 
