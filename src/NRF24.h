@@ -1,3 +1,5 @@
+#include "que.h"
+
 #ifndef __INCL_NRF24
 #define __INCL_NRF24
 
@@ -181,6 +183,7 @@ void        NRF_init(nrf_p nrf);
 void        NRF_term(nrf_p nrf);
 
 nrf_p           getNRFReference(void);
+que_handle_t *  getTxQueue(void);
 void            setupNRF24L01(void);
 
 #endif
