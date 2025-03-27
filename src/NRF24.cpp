@@ -11,6 +11,9 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 ./NRF24 x # tx
 */
 
+#include <string>
+#include <queue>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +26,8 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 #include "logger.h"
 #include "posixthread.h"
 #include "utils.h"
-#include "que.h"
+
+using namespace std;
 
 /*
    Note that RX and TX addresses must match
@@ -55,8 +59,6 @@ gcc -Wall -o NRF24 NRF24.c -llgpio
 */
 
 static nrf_t            nrf;
-que_handle_t            txQueue;
-
 
 int NRF_xfer(nrf_p nrf, char * txBuf, char * rxBuf, int count) {
     return lgSpiXfer(nrf->spih, txBuf, rxBuf, count);
@@ -493,49 +495,54 @@ void NRF_term(nrf_p nrf) {
    lgGpioFree(nrf->chip, nrf->CE);
 
    lgGpiochipClose(nrf->chip);
-
-   qDestroy(getTxQueue());
 }
 
 nrf_p getNRFReference(void) {
     return &nrf;
 }
 
-que_handle_t * getTxQueue(void) {
-    return &txQueue;
-}
-
 void setupNRF24L01(void) {
-   const char * dataRateCfg = cfgGetValue("radio.baud");
-
-   int dataRate;
-   if (strncmp(dataRateCfg, "2MHz", 4) == 0) {
+    cfgmgr & cfg = cfgmgr::getInstance();
+    
+    string dataRateCfg = cfg.getValue("radio.baud");
+    
+    int dataRate;
+    if (dataRateCfg.compare("2MHz") == 0) {
       dataRate = NRF24L01_RF_SETUP_DATA_RATE_2MBPS;
-   }
-   else if (strncmp(dataRateCfg, "1MHz", 4) == 0) {
+    }
+    else if (dataRateCfg.compare("1MHz") == 0) {
       dataRate = NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
-   }
-   else if (strncmp(dataRateCfg, "250KHz", 6) == 0) {
+    }
+    else if (dataRateCfg.compare("250KHz") == 0) {
       dataRate = NRF24L01_RF_SETUP_DATA_RATE_250KBPS;
-   }
-   else {
+    }
+    else {
       dataRate = NRF24L01_RF_SETUP_DATA_RATE_1MBPS;
-   }
-
-   nrf.CE 				   = NRF_SPI_CE_PIN;
-   nrf.spi_device 		= NRF_SPI_DEVICE;
-   nrf.spi_channel 	   = NRF_SPI_CHANNEL;
-   nrf.spi_speed 		   = NRF_SPI_FREQUENCY;
-   nrf.mode 			   = NRF_RX;
-   nrf.channel 		   = cfgGetValueAsInteger("radio.channel");
-   nrf.payload 		   = NRF_MAX_PAYLOAD;
-   nrf.data_rate        = dataRate;
-   nrf.local_address    = cfgGetValue("radio.localaddress");
-   nrf.remote_address   = cfgGetValue("radio.remoteaddress");
-   nrf.pad 			      = 32;
-   nrf.address_bytes 	= 5;
-   nrf.crc_bytes 		   = 2;
-   nrf.PTX 			      = 0;
-
-   qInit(getTxQueue(), 8U);
+    }
+    
+    int channel = cfg.getValueAsInteger("radio.channel");
+    string localAddress = cfg.getValue("radio.localaddress");
+    string remoteAddress = cfg.getValue("radio.remoteaddress");
+    
+    logger & log = logger::getInstance();
+    
+    log.logDebug("Got radio data rate 0x%02X", dataRate);
+    log.logDebug("Got radio channel [%d]", channel);
+    log.logDebug("Got local address [%s]", localAddress.c_str());
+    log.logDebug("Got remote address [%s]", remoteAddress.c_str());
+    
+    nrf.CE = NRF_SPI_CE_PIN;
+    nrf.spi_device = NRF_SPI_DEVICE;
+    nrf.spi_channel = NRF_SPI_CHANNEL;
+    nrf.spi_speed = NRF_SPI_FREQUENCY;
+    nrf.mode = NRF_RX;
+    nrf.channel = channel;
+    nrf.payload = NRF_MAX_PAYLOAD;
+    nrf.data_rate = dataRate;
+    nrf.local_address = localAddress.c_str();
+    nrf.remote_address = remoteAddress.c_str();
+    nrf.pad = 32;
+    nrf.address_bytes = 5;
+    nrf.crc_bytes = 2;
+    nrf.PTX = 0;
 }

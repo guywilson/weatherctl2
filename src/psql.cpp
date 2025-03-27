@@ -8,12 +8,17 @@
 #include "logger.h"
 #include "psql.h"
 
+#define CONNECTION_STRING_LENGTH            256
+
 PGconn * dbConnect(const char * host, int port, const char * database, const char * username, const char * password) {
-    char            szConnection[256];
+    char            szConnection[CONNECTION_STRING_LENGTH];
     PGconn *        connection;
 
-    sprintf(
+    logger & log = logger::getInstance();
+
+    snprintf(
         szConnection, 
+        CONNECTION_STRING_LENGTH,
         "host=%s port=%d dbname=%s user=%s password=%s", 
         host,
         port,
@@ -24,7 +29,7 @@ PGconn * dbConnect(const char * host, int port, const char * database, const cha
     connection = PQconnectdb(szConnection);
 
     if (PQstatus(connection) != CONNECTION_OK) {
-        lgLogError("Could not connect to database: %s:%s", database, PQerrorMessage(connection));
+        log.logError("Could not connect to database: %s:%s", database, PQerrorMessage(connection));
 
         return NULL;
     }
@@ -39,16 +44,18 @@ void dbFinish(PGconn * connection) {
 int dbTransactionBegin(PGconn * connection) {
 	PGresult *			queryResult;
     
+    logger & log = logger::getInstance();
+    
     queryResult = PQexec(connection, "BEGIN");
 
     if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        lgLogError("Error beginning transaction [%s]", PQerrorMessage(connection));
+        log.logError("Error beginning transaction [%s]", PQerrorMessage(connection));
         PQclear(queryResult);
         
         return -1;
     }
 
-    lgLogDebug("Transaction - Open");
+    log.logDebug("Transaction - Open");
 
     PQclear(queryResult);
 
@@ -58,16 +65,18 @@ int dbTransactionBegin(PGconn * connection) {
 int dbTransactionEnd(PGconn * connection) {
 	PGresult *			queryResult;
     
+    logger & log = logger::getInstance();
+    
     queryResult = PQexec(connection, "END");
 
     if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        lgLogError("Error ending transaction [%s]", PQerrorMessage(connection));
+        log.logError("Error ending transaction [%s]", PQerrorMessage(connection));
         PQclear(queryResult);
         
         return -1;
     }
 
-    lgLogDebug("Transaction - Closed");
+    log.logDebug("Transaction - Closed");
 
     PQclear(queryResult);
 
@@ -77,12 +86,14 @@ int dbTransactionEnd(PGconn * connection) {
 PGresult * dbExecute(PGconn * connection, const char * sql) {
     PGresult *          r;
 
+    logger & log = logger::getInstance();
+    
     dbTransactionBegin(connection);
 
     r = PQexec(connection, sql);
 
     if (PQresultStatus(r) != PGRES_COMMAND_OK && PQresultStatus(r) != PGRES_TUPLES_OK) {
-        lgLogError("Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection));
+        log.logError("Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection));
 
         if (r != NULL) {
             PQclear(r);
@@ -93,7 +104,7 @@ PGresult * dbExecute(PGconn * connection, const char * sql) {
         return NULL;
     }
     else {
-        lgLogDebug("Successfully executed statement [%s]", sql);
+        log.logDebug("Successfully executed statement [%s]", sql);
     }
 
     dbTransactionEnd(connection);
