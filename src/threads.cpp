@@ -282,8 +282,11 @@ static void * NRF_listen_thread(void * pParms) {
 
     int postCycleSeconds = cfg.getValueAsInteger("wow.postcycletime");
 
+    log.logInfo("Got post cycle time for WOW service [%d]", postCycleSeconds);
+
     while (true) {
         while (NRF_data_ready(nrf)) {
+            log.logDebug("NRF24L01 has received data...");
             NRF_get_payload(nrf, rxBuffer);
 
             if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
