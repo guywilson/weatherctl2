@@ -526,10 +526,10 @@ void setupNRF24L01(void) {
     
     logger & log = logger::getInstance();
     
-    log.logDebug("Got radio data rate 0x%02X", dataRate);
-    log.logDebug("Got radio channel [%d]", channel);
-    log.logDebug("Got local address [%s]", localAddress.c_str());
-    log.logDebug("Got remote address [%s]", remoteAddress.c_str());
+    log.logDebug(logger::buildMsg("Got radio data rate 0x%02X", dataRate));
+    log.logDebug(logger::buildMsg("Got radio channel [%d]", channel));
+    log.logDebug(logger::buildMsg("Got local address [%s]", localAddress.c_str()));
+    log.logDebug(logger::buildMsg("Got remote address [%s]", remoteAddress.c_str()));
     
     nrf.CE = NRF_SPI_CE_PIN;
     nrf.spi_device = NRF_SPI_DEVICE;
