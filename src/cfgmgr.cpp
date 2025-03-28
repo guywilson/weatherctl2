@@ -29,6 +29,14 @@ static const char * getDecimalValue(string & value) {
     return value.c_str();
 }
 
+static const char * getPropertyFileName(string & value) {
+    static const char * propertyFileName;
+
+    propertyFileName = value.substr(1, value.length() - 2).c_str();
+
+    return propertyFileName;
+}
+
 bool cfgmgr::isValuePropertyFile(string & value) {
     if (value[0] == '<' && value[value.length() - 1] == '>') {
         return true;
@@ -37,23 +45,27 @@ bool cfgmgr::isValuePropertyFile(string & value) {
     return false;
 }
 
-char * cfgmgr::readPropertyValue(string & propertyFileName) {
-    ifstream propStream;
+char * cfgmgr::readPropertyValue(string & value) {
+    const char * propertyFileName = getPropertyFileName(value);
 
-    propStream.open(propertyFileName.substr(1, propertyFileName.length() - 2));
+    FILE * fprop = fopen(propertyFileName, "rt");
 
-    propStream.seekg(0, ios_base::seekdir::end);
-    int propLength = propStream.tellg();
-    propStream.seekg(0);
+    if (fprop == NULL) {
+        throw cfg_error(cfg_error::buildMsg("Failed to open property file %s", propertyFileName));
+    }
+
+    fseek(fprop, 0L, SEEK_END);
+    int propLength = (int)ftell(fprop);
+    fseek(fprop, 0L, SEEK_SET);
 
     char * property = (char *)malloc(propLength);
 
     if (property == NULL) {
-        throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName.c_str()));
+        throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName));
     }
 
-    propStream.read(property, propLength);
-    propStream.close();
+    fread(property, 1, propLength, fprop);
+    fclose(fprop);
 
     return property;
 }

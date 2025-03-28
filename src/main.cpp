@@ -140,7 +140,7 @@ int main(int argc, char ** argv) {
 		cfg.initialise(pszConfigFileName);
 	}
 	catch (cfg_error & e) {
-		fprintf(stderr, "Could not open configuration file %s\n", pszConfigFileName);
+		fprintf(stderr, "Could not open configuration file '%s':'%s'\n", pszConfigFileName, e.what());
 		exit(-1);
 	}
 
