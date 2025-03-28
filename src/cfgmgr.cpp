@@ -58,7 +58,7 @@ char * cfgmgr::readPropertyValue(string & value) {
     int propLength = (int)ftell(fprop);
     fseek(fprop, 0L, SEEK_SET);
 
-    char * property = (char *)malloc(propLength);
+    char * property = (char *)malloc(propLength + 1);
 
     if (property == NULL) {
         throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName));
@@ -67,6 +67,8 @@ char * cfgmgr::readPropertyValue(string & value) {
     fread(property, 1, propLength, fprop);
     fclose(fprop);
 
+    property[propLength] = 0;
+    
     return property;
 }
 
