@@ -29,6 +29,35 @@ static const char * getDecimalValue(string & value) {
     return value.c_str();
 }
 
+bool cfgmgr::isValuePropertyFile(string & value) {
+    if (value[0] == '<' && value[value.length() - 1] == '>') {
+        return true;
+    }
+
+    return false;
+}
+
+char * cfgmgr::readPropertyValue(string & propertyFileName) {
+    ifstream propStream;
+
+    propStream.open(propertyFileName.substr(1, propertyFileName.length() - 2));
+
+    propStream.seekg(0, ios_base::seekdir::end);
+    int propLength = propStream.tellg();
+    propStream.seekg(0);
+
+    char * property = (char *)malloc(propLength);
+
+    if (property == NULL) {
+        throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName.c_str()));
+    }
+
+    propStream.read(property, propLength);
+    propStream.close();
+
+    return property;
+}
+
 void cfgmgr::initialise(const string & configFileName) {
     ifstream ifs;
 
@@ -50,6 +79,12 @@ void cfgmgr::initialise(const string & configFileName) {
 
         string key = line.substr(0, equalPos);
         string value = line.substr(equalPos + 1);
+
+        if (isValuePropertyFile(value)) {
+            char * property = readPropertyValue(value);
+            value.assign(property);
+            free(property);
+        }
 
         this->values[key] = value;
     }

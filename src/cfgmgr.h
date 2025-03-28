@@ -72,6 +72,9 @@ class cfgmgr {
 
         cfgmgr() {}
 
+        bool isValuePropertyFile(string & value);
+        char * readPropertyValue(string & propertyFileName);
+
     public:
         ~cfgmgr() {}
 
