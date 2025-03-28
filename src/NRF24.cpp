@@ -330,8 +330,6 @@ int NRF_data_ready(nrf_p nrf) {
    int         status;
    char        rxBuf = 0;
 
-   logger & log = logger::getInstance();
-
    status = NRF_get_status(nrf);
 
    if (status & NRF_RX_DR) {
@@ -342,8 +340,6 @@ int NRF_data_ready(nrf_p nrf) {
 
    status = rxBuf;
 
-   log.logDebug("Got NRF24L01 FIFO status 0x%04X", status);
-   
    return ((status & NRF_FRX_EMPTY) ? 0 : 1);
 }
 
@@ -506,6 +502,9 @@ nrf_p getNRFReference(void) {
 }
 
 void setupNRF24L01(void) {
+    static char szLocalAddress[32];
+    static char szRemoteAddress[32];
+
     cfgmgr & cfg = cfgmgr::getInstance();
     
     string dataRateCfg = cfg.getValue("radio.baud");
@@ -525,15 +524,15 @@ void setupNRF24L01(void) {
     }
     
     int channel = cfg.getValueAsInteger("radio.channel");
-    string localAddress = cfg.getValue("radio.localaddress");
-    string remoteAddress = cfg.getValue("radio.remoteaddress");
+    strncpy(szLocalAddress, cfg.getValue("radio.localaddress").c_str(), 31);
+    strncpy(szRemoteAddress, cfg.getValue("radio.remoteaddress").c_str(), 31);
     
     logger & log = logger::getInstance();
     
     log.logDebug("Got radio data rate 0x%02X", dataRate);
     log.logDebug("Got radio channel [%d]", channel);
-    log.logDebug("Got local address [%s]", localAddress.c_str());
-    log.logDebug("Got remote address [%s]", remoteAddress.c_str());
+    log.logDebug("Got local address [%s]", szLocalAddress);
+    log.logDebug("Got remote address [%s]", szRemoteAddress);
     
     nrf.CE = NRF_SPI_CE_PIN;
     nrf.spi_device = NRF_SPI_DEVICE;
@@ -543,8 +542,8 @@ void setupNRF24L01(void) {
     nrf.channel = channel;
     nrf.payload = NRF_MAX_PAYLOAD;
     nrf.data_rate = dataRate;
-    nrf.local_address = localAddress.c_str();
-    nrf.remote_address = remoteAddress.c_str();
+    nrf.local_address = szLocalAddress;
+    nrf.remote_address = szRemoteAddress;
     nrf.pad = 32;
     nrf.address_bytes = 5;
     nrf.crc_bytes = 2;
