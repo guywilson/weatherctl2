@@ -2,6 +2,7 @@
 #include <stdbool.h>
 
 #include "posixthread.h"
+#include "packet.h"
 
 #ifndef __INCL_THREADS
 #define __INCL_THREADS
