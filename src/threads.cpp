@@ -55,11 +55,7 @@ using namespace std;
 static queue<weather_transform_t> dbq;
 static queue<weather_transform_t> webPostQueue;
 
-static pxt_handle_t             nrfListenThread;
-static pxt_handle_t             dbUpdateThread;
-static pxt_handle_t             wowPostThread;
-
-static char                     szDumpBuffer[1024];
+static char szDumpBuffer[1024];
 
 typedef struct {
     char *      response;
@@ -135,7 +131,75 @@ static float _computeDewPoint(uint16_t rawTemperature, uint16_t rawHumidity) {
     return dewPoint;
 }
 
-static void _transformWeatherPacket(weather_transform_t * target, weather_packet_t * source) {
+static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
+    if (tr->temperature > ds->max_temperature) {
+        ds->max_temperature = tr->temperature;
+    }
+    if (tr->temperature < ds->min_temperature || (ds->min_temperature == 0.00 && tr->temperature > 0.00)) {
+        ds->min_temperature = tr->temperature;
+    }
+
+    if (tr->normalisedPressure > ds->max_pressure) {
+        ds->max_pressure = tr->normalisedPressure;
+    }
+    if (tr->normalisedPressure < ds->min_pressure || (ds->min_pressure == 0.00 && tr->normalisedPressure > 0.00)) {
+        ds->min_pressure = tr->normalisedPressure;
+    }
+
+    if (tr->humidity > ds->max_humidity) {
+        ds->max_humidity = tr->humidity;
+    }
+    if (tr->humidity < ds->min_humidity || (ds->min_humidity == 0.00 && tr->humidity > 0.00)) {
+        ds->min_humidity = tr->humidity;
+    }
+
+    if (tr->windspeed > ds->max_wind_speed) {
+        ds->max_wind_speed = tr->windspeed;
+    }
+
+    if (tr->gustSpeed > ds->max_wind_gust) {
+        ds->max_wind_gust = tr->gustSpeed;
+    }
+
+    ds->total_rainfall += tr->rainfall;
+}
+
+void ThreadManager::start() {
+	logger & log = logger::getInstance();
+
+		if (nrfListenThread.start()) {
+			log.logStatus("Started NRFListenThread successfully");
+		}
+		else {
+			throw thread_error("Failed to start NRFListenThread");
+		}
+
+		if (dbUpdateThread.start()) {
+			log.logStatus("Started DBUpdateThread successfully");
+		}
+		else {
+			throw thread_error("Failed to start DBUpdateThread");
+		}
+
+		if (wowUpdateThread.start()) {
+			log.logStatus("Started WoWUpdateThread successfully");
+		}
+		else {
+			throw thread_error("Failed to start WoWUpdateThread");
+		}
+}
+
+void ThreadManager::kill() {
+    nrfListenThread.stop();
+    dbUpdateThread.stop();
+    wowUpdateThread.stop();
+}
+
+weather_transform_t * NRFListenThread::transformWeatherPacket(weather_packet_t * source) {
+    static weather_transform_t transform;
+
+    weather_transform_t * target = &transform;
+
     target->packetNum = 0;
     target->packetNum = ((uint32_t)source->packetNum[2] << 16) | ((uint32_t)source->packetNum[1] << 8) | ((uint32_t)source->packetNum[0]);
     target->packetNum &= 0x00FFFFFF;
@@ -204,49 +268,17 @@ static void _transformWeatherPacket(weather_transform_t * target, weather_packet
                 anemometerFactor;
 
     target->rainfall = (float)source->rawRainfall * RAIN_GAUGE_MM;
+
+    return target;
 }
 
-static void updateSummary(daily_summary_t * ds, weather_transform_t * tr) {
-    if (tr->temperature > ds->max_temperature) {
-        ds->max_temperature = tr->temperature;
-    }
-    if (tr->temperature < ds->min_temperature || (ds->min_temperature == 0.00 && tr->temperature > 0.00)) {
-        ds->min_temperature = tr->temperature;
-    }
-
-    if (tr->normalisedPressure > ds->max_pressure) {
-        ds->max_pressure = tr->normalisedPressure;
-    }
-    if (tr->normalisedPressure < ds->min_pressure || (ds->min_pressure == 0.00 && tr->normalisedPressure > 0.00)) {
-        ds->min_pressure = tr->normalisedPressure;
-    }
-
-    if (tr->humidity > ds->max_humidity) {
-        ds->max_humidity = tr->humidity;
-    }
-    if (tr->humidity < ds->min_humidity || (ds->min_humidity == 0.00 && tr->humidity > 0.00)) {
-        ds->min_humidity = tr->humidity;
-    }
-
-    if (tr->windspeed > ds->max_wind_speed) {
-        ds->max_wind_speed = tr->windspeed;
-    }
-
-    if (tr->gustSpeed > ds->max_wind_gust) {
-        ds->max_wind_gust = tr->gustSpeed;
-    }
-
-    ds->total_rainfall += tr->rainfall;
-}
-
-static void * NRF_listen_thread(void * pParms) {
+void * NRFListenThread::run() {
     int                 rtn;
     char                rxBuffer[64];
     uint8_t             packetID;
     weather_packet_t    pkt;
     sleep_packet_t      sleepPkt;
     watchdog_packet_t   wdPkt;
-    weather_transform_t tr;
     int                 msgCounter = 0;
 
     nrf_p nrf = getNRFReference();
@@ -285,6 +317,8 @@ static void * NRF_listen_thread(void * pParms) {
     log.logInfo("Got post cycle time for WOW service [%d]", postCycleSeconds);
 
     while (true) {
+        weather_transform_t * tr;
+
         while (NRF_data_ready(nrf)) {
             log.logDebug("NRF24L01 has received data...");
             NRF_get_payload(nrf, rxBuffer);
@@ -299,32 +333,32 @@ static void * NRF_listen_thread(void * pParms) {
                 case PACKET_ID_WEATHER:
                     memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
 
-                    _transformWeatherPacket(&tr, &pkt);
+                    tr = transformWeatherPacket(&pkt);
 
                     msgCounter += 30;
 
                     if (msgCounter == postCycleSeconds) {
-                        webPostQueue.push(tr);
+                        webPostQueue.push(*tr);
 
                         msgCounter = 0;
                     }
 
-                    dbq.push(tr);
+                    dbq.push(*tr);
 
                     log.logDebug("Got weather data:");
-                    log.logDebug("\tPacket num:  %u", tr.packetNum);
+                    log.logDebug("\tPacket num:  %u", tr->packetNum);
                     log.logDebug("\tStatus:      0x%04X", pkt.status);
-                    log.logDebug("\tBat. volts:  %.2f", tr.batteryVoltage);
-                    log.logDebug("\tBat. percent:%.2f", tr.batteryPercentage);
-                    log.logDebug("\tBat. crate:  %.2f", tr.batteryChargeRate);
-                    log.logDebug("\tTemperature: %.2f", tr.temperature);
-                    log.logDebug("\tDew point:   %.2f", tr.dewPoint);
-                    log.logDebug("\tAdj pressure:%.2f", tr.normalisedPressure);
-                    log.logDebug("\tAct pressure:%.2f", tr.actualPressure);
-                    log.logDebug("\tHumidity:    %d%%", (int)tr.humidity);
-                    log.logDebug("\tWind speed:  %.2f", tr.windspeed);
-                    log.logDebug("\tWind gust:   %.2f", tr.gustSpeed);
-                    log.logDebug("\tRainfall:    %.2f", tr.rainfall);
+                    log.logDebug("\tBat. volts:  %.2f", tr->batteryVoltage);
+                    log.logDebug("\tBat. percent:%.2f", tr->batteryPercentage);
+                    log.logDebug("\tBat. crate:  %.2f", tr->batteryChargeRate);
+                    log.logDebug("\tTemperature: %.2f", tr->temperature);
+                    log.logDebug("\tDew point:   %.2f", tr->dewPoint);
+                    log.logDebug("\tAdj pressure:%.2f", tr->normalisedPressure);
+                    log.logDebug("\tAct pressure:%.2f", tr->actualPressure);
+                    log.logDebug("\tHumidity:    %d%%", (int)tr->humidity);
+                    log.logDebug("\tWind speed:  %.2f", tr->windspeed);
+                    log.logDebug("\tWind gust:   %.2f", tr->gustSpeed);
+                    log.logDebug("\tRainfall:    %.2f", tr->rainfall);
                     break;
 
                 case PACKET_ID_SLEEP:
@@ -332,11 +366,11 @@ static void * NRF_listen_thread(void * pParms) {
 
                     pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
 
-                    _transformWeatherPacket(&tr, &pkt);
+                    tr = transformWeatherPacket(&pkt);
 
                     log.logStatus("Got sleep packet:");
                     log.logStatus("\tStatus:      0x%08X", sleepPkt.status);
-                    log.logStatus("\tBat. volts:  %.2f", tr.batteryVoltage);
+                    log.logStatus("\tBat. volts:  %.2f", tr->batteryVoltage);
                     log.logStatus("\tSleep for:   %d", (int)sleepPkt.sleepHours);
                     break;
 
@@ -351,16 +385,16 @@ static void * NRF_listen_thread(void * pParms) {
                     break;
             }
 
-            pxtSleep(milliseconds, 250);
+            PosixThread::sleep_ms(250);
         }
 
-        pxtSleep(seconds, 2);
+        PosixThread::sleep(2);
     }
 
     return NULL;
 }
 
-static void * db_update_thread(void * pParms) {
+void * DBUpdateThread::run() {
     PGconn *                wctlConnection;
     weather_transform_t     tr;
     daily_summary_t         ds;
@@ -388,7 +422,7 @@ static void * db_update_thread(void * pParms) {
 
     while (true) {
         while (dbq.empty()) {
-            pxtSleep(milliseconds, 25);
+            PosixThread::sleep_ms(25);
         }
 
         tr = dbq.front();
@@ -420,7 +454,7 @@ static void * db_update_thread(void * pParms) {
 
         dbExecute(wctlConnection, szInsertStr);
 
-        pxtSleep(milliseconds, 100);
+        PosixThread::sleep_ms(100);
 
         log.logDebug("Inserting telemetry data");
 
@@ -448,7 +482,7 @@ static void * db_update_thread(void * pParms) {
         ** and reset the summary values...
         */
         if (hour == 23 && minute == 59 && !isSummaryDone) {
-            pxtSleep(milliseconds, 100);
+            PosixThread::sleep_ms(100);
 
             log.logDebug("Inserting daily summary");
 
@@ -483,7 +517,7 @@ static void * db_update_thread(void * pParms) {
             isSummaryDone = false;
         }
 
-        pxtSleep(milliseconds, 250);
+        PosixThread::sleep_ms(250);
     }
 
     dbFinish(wctlConnection);
@@ -537,7 +571,7 @@ size_t CurlWrite_CallbackFunc(void * contents, size_t size, size_t nmemb, void *
     return newLength;
 }
 
-static void * wow_post_thread(void * pParms) {
+void * WoWUpdateThread::run() {
     float                   tempF;
     float                   dewPointF;
     float                   pressureInHg;
@@ -577,7 +611,7 @@ static void * wow_post_thread(void * pParms) {
         log.logDebug("Software ID: %s", softwareType.c_str());
 
         while (webPostQueue.empty()) {
-            pxtSleep(milliseconds, 25);
+            PosixThread::sleep_ms(25);
         }
 
         tr = webPostQueue.front();
@@ -637,25 +671,8 @@ static void * wow_post_thread(void * pParms) {
             log.logInfo("Posting disbaled by config - do nothing");
         }
 
-        pxtSleep(milliseconds, 250);
+        PosixThread::sleep_ms(250);
     }
 
     return NULL;
-}
-
-void startThreads(void) {
-    pxtCreate(&nrfListenThread, &NRF_listen_thread, false);
-    pxtStart(&nrfListenThread, NULL);
-
-    pxtCreate(&dbUpdateThread, &db_update_thread, true);
-    pxtStart(&dbUpdateThread, NULL);
-
-    pxtCreate(&wowPostThread, &wow_post_thread, true);
-    pxtStart(&wowPostThread, NULL);
-}
-
-void stopThreads(void) {
-    pxtStop(&dbUpdateThread);
-    pxtStop(&nrfListenThread);
-    pxtStop(&wowPostThread);
 }

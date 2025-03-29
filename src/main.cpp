@@ -35,6 +35,7 @@ void printUsage(void) {
 }
 
 void handleSignal(int sigNum) {
+	ThreadManager & threadMgr = ThreadManager::getInstance();
 	logger & log = logger::getInstance();
 
 	switch (sigNum) {
@@ -78,7 +79,7 @@ void handleSignal(int sigNum) {
 
     puts("\n");
     
-    stopThreads();
+    threadMgr.kill();
     
     NRF_term(&nrf);
     log.closelogger();
@@ -205,10 +206,11 @@ int main(int argc, char ** argv) {
 
     setupNRF24L01();
 
-    startThreads();
+	ThreadManager & threadMgr = ThreadManager::getInstance();
+	threadMgr.start();
 
     while (1) {
-        pxtSleep(seconds, 5);
+        PosixThread::sleep(5);
     }
 
 	return 0;

@@ -1,77 +1,59 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
 
+#include "logger.h"
 #include "posixthread.h"
 
+static void * _threadRunner(void * pThreadArgs) {
+	void * pThreadRtn = NULL;
 
-static void * _threadRunner(void * pParms) {
-	void *			pThreadRtn = NULL;
-	bool			go = true;
+	PosixThread * pThread = (PosixThread *)pThreadArgs;
 
-	pxt_handle_t * hpxt = (pxt_handle_t *)pParms;
+	logger & log = logger::getInstance();
+
+	bool go = true;
 
 	while (go) {
-		pThreadRtn = hpxt->run(hpxt->pThreadParm);
+		try {
+			pThreadRtn = pThread->run();
+		}
+		catch (thread_error & e) {
+			log.logError("_threadRunner: Caught exception %s", e.what());
+		}
 
-		if (!hpxt->isRestartable) {
-			go = false;
+		if (pThread->isRestartable) {
+			log.logStatus("Restarting thread...");
+			PosixThread::sleep(1);
 		}
 		else {
-			pxtSleep(seconds, 1);
+			go = false;
 		}
 	}
 
 	return pThreadRtn;
 }
 
-void pxtSleep(TimeUnit u, uint64_t t) {
-	switch (u) {
-		case hours:
-			sleep(t * 3600);
-			break;
+bool PosixThread::start() {
+	return this->start(NULL);
+}
 
-		case minutes:
-			sleep(t * 60);
-			break;
+bool PosixThread::start(void * p) {
+	int			err;
 
-		case seconds:
-			sleep(t);
-			break;
+	this->threadParameters = p;
 
-		case milliseconds:
-			usleep(t * 1000L);
-			break;
+	err = pthread_create(&this->tid, NULL, &_threadRunner, this);
 
-		case microseconds:
-			usleep(t);
-			break;
+	if (err != 0) {
+		log.logError("ERROR! Can't create thread :[%s]", strerror(err));
+		return false;
 	}
+
+	return true;
 }
 
-void pxtCreate(pxt_handle_t * hpxt, void * (* thread)(void *), bool isRestartable) {
-    hpxt->isRestartable = isRestartable;
-    hpxt->run = thread;
-}
-
-int pxtStart(pxt_handle_t * hpxt, void * pParms) {
-    int             error;
-
-    hpxt->pThreadParm = pParms;
-
-    error = pthread_create(&hpxt->tid, NULL, &_threadRunner, hpxt);
-
-    if (error) {
-        printf("Error creating thread\n");
-    }
-
-    return error;
-}
-
-void pxtStop(pxt_handle_t * hpxt) {
-	pthread_kill(hpxt->tid, SIGKILL);
+void PosixThread::stop() {
+	pthread_kill(this->tid, SIGKILL);
 }
