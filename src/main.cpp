@@ -15,12 +15,9 @@ extern "C" {
 #include "cfgmgr.h"
 #include "logger.h"
 #include "posixthread.h"
-#include "nRF24L01.h"
-#include "NRF24.h"
 #include "threads.h"
+#include "radio.h"
 #include "utils.h"
-
-static nrf_t               nrf;
 
 void printUsage(void) {
 	printf("\n Usage: wctl [OPTIONS]\n\n");
@@ -35,7 +32,6 @@ void printUsage(void) {
 }
 
 void handleSignal(int sigNum) {
-	ThreadManager & threadMgr = ThreadManager::getInstance();
 	logger & log = logger::getInstance();
 
 	switch (sigNum) {
@@ -79,9 +75,12 @@ void handleSignal(int sigNum) {
 
     puts("\n");
     
+	ThreadManager & threadMgr = ThreadManager::getInstance();
     threadMgr.kill();
     
-    NRF_term(&nrf);
+	nrf24l01 & radio = nrf24l01::getInstance();
+	radio.close();
+
     log.closelogger();
 
     exit(0);
@@ -203,8 +202,6 @@ int main(int argc, char ** argv) {
 		log.logFatal("Failed to register signal handler for SIGUSR2");
 		return -1;
 	}
-
-    setupNRF24L01();
 
 	ThreadManager & threadMgr = ThreadManager::getInstance();
 	threadMgr.start();

@@ -12,8 +12,7 @@
 #include <postgresql/libpq-fe.h>
 #include <curl/curl.h>
 
-#include "NRF24.h"
-#include "nRF24L01.h"
+#include "radio.h"
 #include "logger.h"
 #include "cfgmgr.h"
 #include "posixthread.h"
@@ -63,8 +62,8 @@ typedef struct {
 }
 curl_chunk_t;
 
-static uint8_t _getPacketType(char * packet) {
-    return (uint8_t)packet[0];
+static uint8_t _getPacketType(uint8_t * packet) {
+    return packet[0];
 }
 
 static uint16_t _getExpectedChipID(void) {
@@ -272,41 +271,68 @@ weather_transform_t * NRFListenThread::transformWeatherPacket(weather_packet_t *
     return target;
 }
 
+static nrfcfg::data_rate getDataRate() {
+    cfgmgr & cfg = cfgmgr::getInstance();
+
+    string dataRateCfg = cfg.getValue("radio.baud");
+    
+    nrfcfg::data_rate dataRate;
+    if (dataRateCfg.compare("2MHz") == 0) {
+        dataRate = nrfcfg::data_rate::data_rate_high;
+    }
+    else if (dataRateCfg.compare("1MHz") == 0) {
+        dataRate = nrfcfg::data_rate::data_rate_medium;
+    }
+    else if (dataRateCfg.compare("250KHz") == 0) {
+        dataRate = nrfcfg::data_rate::data_rate_low;
+    }
+    else {
+        dataRate = nrfcfg::data_rate::data_rate_medium;
+    }
+
+    return dataRate;
+}
+
+static nrfcfg & getRadioConfig() {
+    static nrfcfg radioConfig;
+    static char szLocalAddress[32];
+    static char szRemoteAddress[32];
+
+    cfgmgr & cfg = cfgmgr::getInstance();
+
+    radioConfig.airDataRate = getDataRate();
+    radioConfig.channel = cfg.getValueAsInteger("radio.channel");
+
+    strncpy(szLocalAddress, cfg.getValue("radio.localaddress").c_str(), 31);
+    strncpy(szRemoteAddress, cfg.getValue("radio.remoteaddress").c_str(), 31);
+
+    radioConfig.localAddress = szLocalAddress;
+    radioConfig.remoteAddress = szRemoteAddress;
+    radioConfig.lnaGainOn = false;
+
+    radioConfig.validate();
+
+    return radioConfig;
+}
+
 void * NRFListenThread::run() {
-    int                 rtn;
-    char                rxBuffer[64];
     uint8_t             packetID;
     weather_packet_t    pkt;
     sleep_packet_t      sleepPkt;
     watchdog_packet_t   wdPkt;
     int                 msgCounter = 0;
 
-    nrf_p nrf = getNRFReference();
+    nrf24l01 & radio = nrf24l01::getInstance();
 
     logger & log = logger::getInstance();
     cfgmgr & cfg = cfgmgr::getInstance();
 
     log.logInfo("Opening NRF24L01 device");
 
-    NRF_init(nrf);
+    nrfcfg radioConfig = getRadioConfig();
 
-    NRF_set_local_address(nrf, nrf->local_address);
-    NRF_set_remote_address(nrf, nrf->remote_address);
-
-	rtn = NRF_read_register(nrf, NRF24L01_REG_CONFIG, rxBuffer, 1);
-
-    if (rtn < 0) {
-        log.logError("Failed to transfer SPI data: %s\n", lguErrorText(rtn));
-
-        return NULL;
-    }
-
-    log.logInfo("Read back CONFIG reg: 0x%02X\n", (int)rxBuffer[0]);
-
-    if (rxBuffer[0] == 0x00) {
-        log.logError("Config read back as 0x00, device is probably not plugged in?\n\n");
-        return NULL;
-    }
+    radio.configureSPI(NRF_SPI_FREQUENCY, NRF_SPI_CE_PIN);
+    radio.open(radioConfig);
 
     uint16_t stationID = _getExpectedChipID();
 
@@ -319,19 +345,19 @@ void * NRFListenThread::run() {
     while (true) {
         weather_transform_t * tr;
 
-        while (NRF_data_ready(nrf)) {
+        while (radio.isDataReady()) {
             log.logDebug("NRF24L01 has received data...");
-            NRF_get_payload(nrf, rxBuffer);
+            uint8_t * payload = radio.readPayload();
 
-            if (strHexDump(szDumpBuffer, 1024, rxBuffer, NRF_MAX_PAYLOAD) > 0) {
+            if (strHexDump(szDumpBuffer, 1024, payload, NRF24L01_MAXIMUM_PACKET_LEN) > 0) {
                 log.logDebug("%s", szDumpBuffer);
             }
 
-            packetID = _getPacketType(rxBuffer);
+            packetID = _getPacketType(payload);
 
             switch (packetID) {
                 case PACKET_ID_WEATHER:
-                    memcpy(&pkt, rxBuffer, sizeof(weather_packet_t));
+                    memcpy(&pkt, payload, sizeof(weather_packet_t));
 
                     tr = transformWeatherPacket(&pkt);
 
@@ -362,7 +388,7 @@ void * NRFListenThread::run() {
                     break;
 
                 case PACKET_ID_SLEEP:
-                    memcpy(&sleepPkt, rxBuffer, sizeof(sleep_packet_t));
+                    memcpy(&sleepPkt, payload, sizeof(sleep_packet_t));
 
                     pkt.rawBatteryVolts = sleepPkt.rawBatteryVolts;
 
@@ -375,7 +401,7 @@ void * NRFListenThread::run() {
                     break;
 
                 case PACKET_ID_WATCHDOG:
-                    memcpy(&wdPkt, rxBuffer, sizeof(watchdog_packet_t));
+                    memcpy(&wdPkt, payload, sizeof(watchdog_packet_t));
 
                     log.logStatus("Got watchdog packet");
                     break;
