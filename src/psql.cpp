@@ -14,8 +14,6 @@
 
 using namespace std;
 
-#define CONNECTION_STRING_LENGTH            256
-
 psqlConnection::psqlConnection(const string & host, int port, const string & database, const string & username, const string & password) {
     stringstream s;
     s << "host=" << host << " port=" << port << " user=" << username << " password=" << password;
