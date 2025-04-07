@@ -421,7 +421,6 @@ void * NRFListenThread::run() {
 }
 
 void * DBUpdateThread::run() {
-    PGconn *                wctlConnection;
     weather_transform_t     tr;
     daily_summary_t         ds;
     bool                    isSummaryDone = false;
@@ -434,16 +433,18 @@ void * DBUpdateThread::run() {
 
     memset(&ds, 0, sizeof(daily_summary_t));
 
-    wctlConnection = dbConnect(
-            cfg.getValue("db.host").c_str(), 
-            cfg.getValueAsInteger("db.port"),
-            cfg.getValue("db.database").c_str(),
-            cfg.getValue("db.user").c_str(),
-            cfg.getValue("db.password").c_str());
+    psqlConnection * wctlConnection;
 
-    if (wctlConnection == NULL) {
-        log.logError("Could not connect to database %s", cfg.getValue("db.database").c_str());
-        return NULL;
+    try {
+        wctlConnection = new psqlConnection(
+                                    cfg.getValue("db.host"), 
+                                    cfg.getValueAsInteger("db.port"),
+                                    cfg.getValue("db.database"),
+                                    cfg.getValue("db.user"),
+                                    cfg.getValue("db.password"));
+    }
+    catch (psql_error & e) {
+        log.logError("Failed to connect to database: %s", e.what());
     }
 
     while (true) {
@@ -478,7 +479,7 @@ void * DBUpdateThread::run() {
             tr.gustSpeed
         );
 
-        dbExecute(wctlConnection, szInsertStr);
+        wctlConnection->execute(szInsertStr);
 
         PosixThread::sleep_ms(100);
 
@@ -496,7 +497,7 @@ void * DBUpdateThread::run() {
             tr.status_bits
         );
 
-        dbExecute(wctlConnection, szInsertStr);
+        wctlConnection->execute(szInsertStr);
 
         struct tm * localtime = getLocalTime();
 
@@ -530,7 +531,7 @@ void * DBUpdateThread::run() {
                 ds.max_wind_gust
             );
 
-            dbExecute(wctlConnection, szInsertStr);
+            wctlConnection->execute(szInsertStr);
 
             memset(&ds, 0, sizeof(daily_summary_t));
 
@@ -546,7 +547,7 @@ void * DBUpdateThread::run() {
         PosixThread::sleep_ms(250);
     }
 
-    dbFinish(wctlConnection);
+    delete(wctlConnection);
 
     return NULL;
 }

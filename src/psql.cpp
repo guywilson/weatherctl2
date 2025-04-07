@@ -1,3 +1,7 @@
+#include <string>
+#include <iostream>
+#include <sstream>
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -8,106 +12,75 @@
 #include "logger.h"
 #include "psql.h"
 
+using namespace std;
+
 #define CONNECTION_STRING_LENGTH            256
 
-PGconn * dbConnect(const char * host, int port, const char * database, const char * username, const char * password) {
-    char            szConnection[CONNECTION_STRING_LENGTH];
-    PGconn *        connection;
+psqlConnection::psqlConnection(const string & host, int port, const string & database, const string & username, const string & password) {
+    stringstream s;
+    s << "host=" << host << " port=" << port << " user=" << username << " password=" << password;
 
-    logger & log = logger::getInstance();
-
-    snprintf(
-        szConnection, 
-        CONNECTION_STRING_LENGTH,
-        "host=%s port=%d dbname=%s user=%s password=%s", 
-        host,
-        port,
-        database,
-        username,
-        password);
-
-    connection = PQconnectdb(szConnection);
+    string connectionStr = s.str();
+    
+    connection = PQconnectdb(connectionStr.c_str());
 
     if (PQstatus(connection) != CONNECTION_OK) {
-        log.logError("Could not connect to database: %s:%s", database, PQerrorMessage(connection));
-
-        return NULL;
+        throw psql_error(psql_error::buildMsg("Could not connect to database: %s:%s", database.c_str(), PQerrorMessage(connection)));
     }
-
-    return connection;
+    else {
+        log.logInfo("Successfully connected to database '%s'", database.c_str());
+    }
 }
 
-void dbFinish(PGconn * connection) {
+psqlConnection::~psqlConnection() {
     PQfinish(connection);
 }
 
-int dbTransactionBegin(PGconn * connection) {
-	PGresult *			queryResult;
-    
-    logger & log = logger::getInstance();
-    
-    queryResult = PQexec(connection, "BEGIN");
+void psqlConnection::beginTransaction() {
+    PGresult * result = PQexec(connection, "BEGIN");
 
-    if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        log.logError("Error beginning transaction [%s]", PQerrorMessage(connection));
-        PQclear(queryResult);
-        
-        return -1;
+    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+        PQclear(result);
+        throw psql_error(psql_error::buildMsg("Error beginning transaction [%s]", PQerrorMessage(connection)));
     }
 
-    log.logDebug("Transaction - Open");
+    log.logDebug("BEGIN TRANSACTION");
 
-    PQclear(queryResult);
-
-    return 0;
+    PQclear(result);
 }
 
-int dbTransactionEnd(PGconn * connection) {
-	PGresult *			queryResult;
-    
-    logger & log = logger::getInstance();
-    
-    queryResult = PQexec(connection, "END");
+void psqlConnection::endTransaction() {
+    PGresult * result = PQexec(connection, "END");
 
-    if (PQresultStatus(queryResult) != PGRES_COMMAND_OK) {
-        log.logError("Error ending transaction [%s]", PQerrorMessage(connection));
-        PQclear(queryResult);
-        
-        return -1;
+    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+        PQclear(result);
+        throw psql_error(psql_error::buildMsg("Error ending transaction [%s]", PQerrorMessage(connection)));
     }
 
-    log.logDebug("Transaction - Closed");
+    log.logDebug("END TRANSACTION");
 
-    PQclear(queryResult);
-
-    return 0;
+    PQclear(result);
 }
 
-PGresult * dbExecute(PGconn * connection, const char * sql) {
-    PGresult *          r;
+PGresult * psqlConnection::execute(const char * sql) {
+    beginTransaction();
 
-    logger & log = logger::getInstance();
-    
-    dbTransactionBegin(connection);
+    PGresult * result = PQexec(connection, sql);
 
-    r = PQexec(connection, sql);
-
-    if (PQresultStatus(r) != PGRES_COMMAND_OK && PQresultStatus(r) != PGRES_TUPLES_OK) {
-        log.logError("Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection));
-
-        if (r != NULL) {
-            PQclear(r);
+    if (PQresultStatus(result) != PGRES_COMMAND_OK && PQresultStatus(result) != PGRES_TUPLES_OK) {
+        if (result != NULL) {
+            PQclear(result);
         }
 
-        dbTransactionEnd(connection);
+        endTransaction();
 
-        return NULL;
+        throw psql_error(psql_error::buildMsg("Error issuing statement [%s]: '%s'", sql, PQerrorMessage(connection)));
     }
     else {
         log.logDebug("Successfully executed statement [%s]", sql);
     }
 
-    dbTransactionEnd(connection);
+    endTransaction();
 
-    return r;
+    return result;
 }
