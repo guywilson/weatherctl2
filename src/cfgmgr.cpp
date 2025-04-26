@@ -6,7 +6,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
-#include <strutils.h>
 
 #include "cfgmgr.h"
 
