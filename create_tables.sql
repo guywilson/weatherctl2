@@ -20,7 +20,7 @@ CREATE TABLE telemetry_data (
     packet_num INTEGER,
     battery_voltage NUMERIC(3,2),
     battery_percentage NUMERIC(5,2),
-    battery_crate NUMERIC(5,2)
+    battery_crate NUMERIC(5,2),
     status_bits INTEGER
 );
 
