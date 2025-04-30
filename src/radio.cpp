@@ -280,6 +280,9 @@ void nrf24l01::configureSPI(uint32_t spiFrequency, int CEPin) {
 
     chipDisable();
 
+    spiChannel = NRF_SPI_CHANNEL;
+    spiDevice = NRF_SPI_DEVICE;
+    
     spiHandle = lgSpiOpen(
                         spiChannel, 
                         spiDevice, 
