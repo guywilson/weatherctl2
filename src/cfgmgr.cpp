@@ -9,6 +9,8 @@
 
 #include "cfgmgr.h"
 
+//#define UNIT_TEST_MODE
+
 using namespace std;
 
 static bool inline isStringHexadecimal(string & value) {
@@ -28,12 +30,31 @@ static const char * getDecimalValue(string & value) {
     return value.c_str();
 }
 
-static const char * getPropertyFileName(string & value) {
-    static const char * propertyFileName;
+static inline bool isPropertyFileNamePath(string & propertyFileName) {
+    return (propertyFileName.find_first_of('/') != string::npos ? true : false);
+}
 
-    propertyFileName = value.substr(1, value.length() - 2).c_str();
+static string & getPropertyFileFullPath(string & value, string & configFilePath) {
+    static string propertyFilePath;
 
-    return propertyFileName;
+    string propertyFileName = value.substr(1, value.length() - 2);
+
+    if (isPropertyFileNamePath(propertyFileName)) {
+        propertyFilePath = propertyFileName;
+    }
+    else {
+        propertyFilePath = configFilePath + propertyFileName;
+    }
+
+    return propertyFilePath;
+}
+
+static string & getConfigFilePath(const string & configFileName) {
+    static string path;
+    
+    path = configFileName.substr(0, (configFileName.find_last_of('/') + 1));
+
+    return path;
 }
 
 bool cfgmgr::isValuePropertyFile(string & value) {
@@ -44,13 +65,13 @@ bool cfgmgr::isValuePropertyFile(string & value) {
     return false;
 }
 
-char * cfgmgr::readPropertyValue(string & value) {
-    const char * propertyFileName = getPropertyFileName(value);
+char * cfgmgr::readPropertyValue(string & value, string & configFilePath) {
+    string propertyFileName = getPropertyFileFullPath(value, configFilePath);
 
-    FILE * fprop = fopen(propertyFileName, "rt");
+    FILE * fprop = fopen(propertyFileName.c_str(), "rt");
 
     if (fprop == NULL) {
-        throw cfg_error(cfg_error::buildMsg("Failed to open property file %s", propertyFileName));
+        throw cfg_error(cfg_error::buildMsg("Failed to open property file %s", propertyFileName.c_str()));
     }
 
     fseek(fprop, 0L, SEEK_END);
@@ -60,7 +81,7 @@ char * cfgmgr::readPropertyValue(string & value) {
     char * property = (char *)malloc(propLength + 1);
 
     if (property == NULL) {
-        throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName));
+        throw cfg_error(cfg_error::buildMsg("Failed to allocate %d bytes for property file %s", propLength, propertyFileName.c_str()));
     }
 
     fread(property, 1, propLength, fprop);
@@ -81,6 +102,8 @@ void cfgmgr::initialise(const string & configFileName) {
         throw cfg_error(cfg_error::buildMsg("Failed to open config file '%s'", configFileName.c_str()));
     }
 
+    string path = getConfigFilePath(configFileName);
+
     string line;
 
     while (getline(ifs, line)) {
@@ -94,7 +117,7 @@ void cfgmgr::initialise(const string & configFileName) {
         string value = line.substr(equalPos + 1);
 
         if (isValuePropertyFile(value)) {
-            char * property = readPropertyValue(value);
+            char * property = readPropertyValue(value, path);
             value.assign(property);
             free(property);
         }
@@ -155,6 +178,62 @@ double cfgmgr::getValueAsDouble(const string & key) {
     return strtod(getDecimalValue(value), NULL);
 }
 
+void cfgmgr::test() {
+    string value = "<dbname.prop>";
+    string configFile = "/usr/local/bin/wctl/wctl.cfg";
+    string propertyFileName;
+
+    string configPath = getConfigFilePath(configFile);
+
+    if (configPath.compare("/usr/local/bin/wctl/") == 0) {
+        cout << "Test 1 passed!: " << configPath << endl;
+    }
+    else {
+        cout << "Test 1 failed!: " << configPath << endl;
+    }
+
+    propertyFileName = getPropertyFileFullPath(value, configPath);
+
+    if (propertyFileName.compare("/usr/local/bin/wctl/dbname.prop") == 0) {
+        cout << "Test 2 passed!: " << propertyFileName << endl;
+    }
+    else {
+        cout << "Test 2 failed!: " << propertyFileName << endl;
+    }
+
+    value = "<dbpasswd.prop>";
+    propertyFileName = getPropertyFileFullPath(value, configPath);
+
+    if (propertyFileName.compare("/usr/local/bin/wctl/dbpasswd.prop") == 0) {
+        cout << "Test 3 passed!: " << propertyFileName << endl;
+    }
+    else {
+        cout << "Test 3 failed!: " << propertyFileName << endl;
+    }
+
+    value = "</var/wctl/dbpasswd.prop>";
+    propertyFileName = getPropertyFileFullPath(value, configPath);
+
+    if (propertyFileName.compare("/var/wctl/dbpasswd.prop") == 0) {
+        cout << "Test 4 passed!: " << propertyFileName << endl;
+    }
+    else {
+        cout << "Test 4 failed!: " << propertyFileName << endl;
+    }
+
+    value = "<dbpasswd.prop>";
+    configFile = "wctl.cfg";
+    configPath = getConfigFilePath(configFile);
+    propertyFileName = getPropertyFileFullPath(value, configPath);
+
+    if (propertyFileName.compare("dbpasswd.prop") == 0) {
+        cout << "Test 5 passed!: " << propertyFileName << endl;
+    }
+    else {
+        cout << "Test 5 failed!: " << propertyFileName << endl;
+    }
+}
+
 void cfgmgr::dumpConfig() {
     if (isConfigured) {
         for (auto& i : values) {
@@ -165,3 +244,9 @@ void cfgmgr::dumpConfig() {
         }
     }
 }
+
+#ifdef UNIT_TEST_MODE
+int main(void) {
+    cfgmgr::test();
+}
+#endif

@@ -73,7 +73,7 @@ class cfgmgr {
         cfgmgr() {}
 
         bool isValuePropertyFile(string & value);
-        char * readPropertyValue(string & propertyFileName);
+        char * readPropertyValue(string & propertyFileName, string & configFilePath);
 
     public:
         ~cfgmgr() {}
@@ -89,6 +89,8 @@ class cfgmgr {
         double getValueAsDouble(const string & key);
 
         void dumpConfig();
+        
+        static void test();
 };
 
 #endif
