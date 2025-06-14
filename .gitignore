@@ -3,6 +3,6 @@
 /dep
 src/dummy_lgpio.c
 wctl2
-wctl.log
+wctl.log*
 wctl.pid
 .DS_Store

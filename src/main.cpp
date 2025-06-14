@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
 #include <signal.h>
 
 #include <lgpio.h>
@@ -29,6 +31,57 @@ void printUsage(void) {
 	printf("   -d               Daemonise this application\n");
 	printf("   -log  filename   Write logs to the file\n");
 	printf("\n");
+}
+
+bool logFileExists(const string & logFileName) {
+	FILE * fp = fopen(logFileName.c_str(), "r");
+
+	if (fp == NULL) {
+		return false;
+	}
+	else {
+		fclose(fp);
+		return true;
+	}
+}
+
+void getDateString(char * dateBuffer, int bufferLength) {
+	time_t t = time(NULL);
+
+	struct tm * tmInfo = localtime(&t);
+
+	strftime(dateBuffer, bufferLength, "%Y%m%d", tmInfo);
+}
+
+int archiveLogFile(const string & logFileName) {
+	FILE * fpIn = fopen(logFileName.c_str(), "r");
+
+	if (fpIn == NULL) {
+		return - 1;
+	}
+
+	char dateBuffer[32];
+	getDateString(dateBuffer, 32);
+
+	string archiveFileName = logFileName + "_" + dateBuffer;
+
+	FILE * fpOut = fopen(archiveFileName.c_str(), "w");
+
+	if (fpOut == NULL) {
+		return -1;
+	}
+
+	uint8_t buffer[4096];
+
+	while (!feof(fpIn)) {
+		int bytesRead = fread(buffer, sizeof(uint8_t), 4096, fpIn);
+		fwrite(buffer, sizeof(uint8_t), bytesRead, fpOut);
+	}
+
+	fclose(fpIn);
+	fclose(fpOut);
+
+	return 0;
 }
 
 void handleSignal(int sigNum) {
@@ -157,6 +210,10 @@ int main(int argc, char ** argv) {
 
 	try {
 		if (pszLogFileName != NULL) {
+			if (logFileExists(pszLogFileName)) {
+				archiveLogFile(pszLogFileName);
+			}
+
 			log.initlogger(pszLogFileName, defaultLoggingLevel);
 			free(pszLogFileName);
 		}
@@ -164,6 +221,10 @@ int main(int argc, char ** argv) {
 			string filename = cfg.getValue("log.filename");
 			string level = cfg.getValue("log.level");
 	
+			if (logFileExists(filename) && filename.length() > 0) {
+				archiveLogFile(filename);
+			}
+
 			if (filename.length() == 0 && level.length() == 0) {
 				log.initlogger(defaultLoggingLevel);
 			}
@@ -171,7 +232,7 @@ int main(int argc, char ** argv) {
 				log.initlogger(filename, defaultLoggingLevel);
 			}
 			else {
-				log.initlogger(filename.c_str(), level.c_str());
+				log.initlogger(filename, level.c_str());
 			}
 		}
 	}
